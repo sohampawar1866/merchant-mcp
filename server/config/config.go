@@ -98,7 +98,7 @@ func Load() *Config {
 
 		// Server
 		Port:         envStr("PORT", "8080"),
-		MCPTransport: envStr("MCP_TRANSPORT", "stdio"),
+		MCPTransport: envStr("MCP_TRANSPORT", "streamablehttp"), // default: streamablehttp (use --transport flag or MCP_TRANSPORT env to override)
 
 		// Feature Flags
 		EnableFindAndPrice:     envBool("ENABLE_FIND_AND_PRICE", true),

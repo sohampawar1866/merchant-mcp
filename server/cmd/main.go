@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,20 @@ import (
 func main() {
 	// Crucial for stdio transport: keep stdout clean for JSON-RPC messages only
 	log.SetOutput(os.Stderr)
+
+	// CLI flags — take precedence over env vars and config defaults
+	// Precedence: --transport flag > MCP_TRANSPORT env var > default (streamablehttp)
+	transportFlag := flag.String("transport", "", "MCP transport to use: streamablehttp | sse | stdio (overrides MCP_TRANSPORT env var)")
+	portFlag := flag.String("port", "", "Port to listen on (overrides PORT env var)")
+	flag.Parse()
+
+	// Apply CLI flags into env so config.Load() picks them up
+	if *transportFlag != "" {
+		os.Setenv("MCP_TRANSPORT", *transportFlag)
+	}
+	if *portFlag != "" {
+		os.Setenv("PORT", *portFlag)
+	}
 
 	cfg := config.Load()
 	log.Printf("AgenticCheckout MCP Gateway v0.1.0 starting (transport: %s, port: %s)", cfg.MCPTransport, cfg.Port)
