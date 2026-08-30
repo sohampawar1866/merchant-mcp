@@ -1,0 +1,221 @@
+[
+  {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "AirBass X2 Pro Wireless Earbuds",
+    "description": "Active noise cancelling wireless earbuds with deep bass boost, 36-hour total battery life, and IPX5 water resistance.",
+    "category": "Audio",
+    "tags": ["wireless", "earbuds", "anc", "bass-heavy", "bluetooth", "waterproof"],
+    "tags_source": "merchant_edited",
+    "base_price": 179900,
+    "floor_price": 149900,
+    "stock": 45,
+    "attributes": {
+      "brand": "AirBass",
+      "color": "Midnight Black",
+      "battery_hours": 36,
+      "water_resistance": "IPX5",
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "name": "ClearTone Mini True Wireless",
+    "description": "Ultra-compact true wireless earbuds with quad-mic ENC for crystal-clear voice calls and fast USB-C charging.",
+    "category": "Audio",
+    "tags": ["wireless", "earbuds", "budget", "calls", "compact", "enc"],
+    "tags_source": "merchant_edited",
+    "base_price": 129900,
+    "floor_price": 109900,
+    "stock": 60,
+    "attributes": {
+      "brand": "ClearTone",
+      "color": "Frost White",
+      "battery_hours": 24,
+      "driver_mm": 10,
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "33333333-3333-3333-3333-333333333333",
+    "name": "StudioSound Over-Ear Studio Headphones",
+    "description": "High-fidelity studio monitor headphones with 40mm neodymium drivers, ultra-soft memory foam earcups, and detachable 3.5mm cable.",
+    "category": "Audio",
+    "tags": ["headphones", "over-ear", "studio", "audiophile", "wired", "high-res"],
+    "tags_source": "merchant_edited",
+    "base_price": 449900,
+    "floor_price": 379900,
+    "stock": 20,
+    "attributes": {
+      "brand": "StudioSound",
+      "color": "Matte Gunmetal",
+      "impedance_ohms": 32,
+      "frequency_response": "15Hz - 25kHz",
+      "warranty_months": 24
+    }
+  },
+  {
+    "id": "44444444-4444-4444-4444-444444444444",
+    "name": "PulseTrack Apex Smartwatch",
+    "description": "Advanced fitness smartwatch with 1.43-inch AMOLED always-on display, continuous SpO2 and heart-rate tracking, GPS, and Bluetooth calling.",
+    "category": "Wearables",
+    "tags": ["smartwatch", "fitness", "gps", "amoled", "heart-rate", "bluetooth-calling"],
+    "tags_source": "merchant_edited",
+    "base_price": 329900,
+    "floor_price": 279900,
+    "stock": 35,
+    "attributes": {
+      "brand": "PulseTrack",
+      "color": "Space Grey",
+      "display_inches": 1.43,
+      "battery_days": 10,
+      "water_rating": "5ATM",
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "55555555-5555-5555-5555-555555555555",
+    "name": "FitBand Active Fitness Tracker",
+    "description": "Lightweight water-resistant fitness wristband with step counter, sleep tracking, 50+ workout modes, and 14-day battery life.",
+    "category": "Wearables",
+    "tags": ["fitness-band", "tracker", "sleep-tracking", "water-resistant", "budget"],
+    "tags_source": "merchant_edited",
+    "base_price": 149900,
+    "floor_price": 119900,
+    "stock": 80,
+    "attributes": {
+      "brand": "FitBand",
+      "color": "Obsidian Black",
+      "weight_grams": 24,
+      "battery_days": 14,
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "66666666-6666-6666-6666-666666666666",
+    "name": "NovaCharge 65W GaN Fast Charger",
+    "description": "Compact 3-port GaN power adapter with dual USB-C Power Delivery 3.0 and USB-A QC 4.0 for laptops, tablets, and phones.",
+    "category": "Desk Accessories",
+    "tags": ["charger", "gan", "fast-charging", "power-delivery", "usb-c", "travel"],
+    "tags_source": "merchant_edited",
+    "base_price": 199900,
+    "floor_price": 169900,
+    "stock": 50,
+    "attributes": {
+      "brand": "NovaCharge",
+      "color": "Pearl White",
+      "max_output_watts": 65,
+      "ports": "2x USB-C, 1x USB-A",
+      "warranty_months": 18
+    }
+  },
+  {
+    "id": "77777777-7777-7777-7777-777777777777",
+    "name": "ErgoLift Aluminum Laptop Stand",
+    "description": "Foldable aerospace-grade aluminum laptop riser with 6 adjustable angle levels, silicone anti-slip pads, and cooling airflow cutout.",
+    "category": "Desk Accessories",
+    "tags": ["laptop-stand", "ergonomic", "aluminum", "foldable", "desk-setup"],
+    "tags_source": "merchant_edited",
+    "base_price": 89900,
+    "floor_price": 74900,
+    "stock": 90,
+    "attributes": {
+      "brand": "ErgoLift",
+      "color": "Silver",
+      "compatible_sizes": "10-17 inches",
+      "material": "Aluminum Alloy",
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "88888888-8888-8888-8888-888888888888",
+    "name": "DeskGlow RGB Gaming Desk Mat",
+    "description": "Extra-large 900x400mm waterproof gaming mouse pad with 14 customizable RGB lighting modes and stitched anti-fray edges.",
+    "category": "Desk Accessories",
+    "tags": ["desk-mat", "mouse-pad", "rgb", "gaming", "waterproof", "large"],
+    "tags_source": "merchant_edited",
+    "base_price": 119900,
+    "floor_price": 99900,
+    "stock": 40,
+    "attributes": {
+      "brand": "DeskGlow",
+      "dimensions_mm": "900x400x4",
+      "lighting_modes": 14,
+      "surface": "Micro-textured Cloth",
+      "warranty_months": 6
+    }
+  },
+  {
+    "id": "99999999-9999-9999-9999-999999999999",
+    "name": "LumiSmart RGB Smart Bulb 9W",
+    "description": "Wi-Fi + BLE smart LED bulb with 16 million colors, voice assistant control (Alexa & Google Assistant), and music sync modes.",
+    "category": "Smart Home",
+    "tags": ["smart-bulb", "rgb", "smart-home", "alexa", "wifi", "energy-efficient"],
+    "tags_source": "merchant_edited",
+    "base_price": 59900,
+    "floor_price": 49900,
+    "stock": 100,
+    "attributes": {
+      "brand": "LumiSmart",
+      "socket_type": "B22",
+      "lumens": 850,
+      "wattage": 9,
+      "warranty_months": 24
+    }
+  },
+  {
+    "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "name": "AeroBeam 4K Portable Projector",
+    "description": "Mini smart theater projector with native 1080p supporting 4K decoding, Android 11 OS, auto keystone correction, and dual 5W speakers.",
+    "category": "Smart Home",
+    "tags": ["projector", "4k", "smart-home", "home-theater", "portable", "bluetooth"],
+    "tags_source": "merchant_edited",
+    "base_price": 1299900,
+    "floor_price": 1099900,
+    "stock": 15,
+    "attributes": {
+      "brand": "AeroBeam",
+      "brightness_ansi": 450,
+      "projection_size": "40-150 inches",
+      "os": "Android 11",
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "name": "KeyCraft Pro Wireless Mechanical Keyboard",
+    "description": "75% compact hot-swappable mechanical keyboard with pre-lubed Gateron Yellow switches, sound-dampening foam, and tri-mode connectivity (2.4G/BT/Wired).",
+    "category": "Desk Accessories",
+    "tags": ["keyboard", "mechanical", "hot-swap", "wireless", "gaming", "typing"],
+    "tags_source": "merchant_edited",
+    "base_price": 549900,
+    "floor_price": 469900,
+    "stock": 25,
+    "attributes": {
+      "brand": "KeyCraft",
+      "layout": "75%",
+      "switches": "Gateron Yellow Linear",
+      "connectivity": "Tri-mode (Bluetooth 5.1 / 2.4GHz / Type-C)",
+      "battery_mah": 4000,
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    "name": "SoundBar 60W Bluetooth TV Speaker",
+    "description": "2.1 channel cinematic soundbar with built-in subwoofers, Optical / HDMI ARC / AUX inputs, and preset EQ modes (Movie, Music, News).",
+    "category": "Audio",
+    "tags": ["soundbar", "tv-speaker", "bass", "bluetooth", "hdmi-arc", "cinematic"],
+    "tags_source": "merchant_edited",
+    "base_price": 399900,
+    "floor_price": 329900,
+    "stock": 30,
+    "attributes": {
+      "brand": "SoundBar",
+      "color": "Charcoal Black",
+      "output_power_watts": 60,
+      "channels": "2.1",
+      "inputs": "HDMI ARC, Optical, AUX, USB, Bluetooth 5.3",
+      "warranty_months": 12
+    }
+  }
+]
