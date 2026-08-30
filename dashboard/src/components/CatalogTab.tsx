@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, RefreshCw, Sparkles, Download, Edit2, Trash2, ShieldAlert } from 'lucide-react';
+import { Package, Plus, RefreshCw, Download, Edit2, Trash2, Lock } from 'lucide-react';
 import { ProductModal } from './ProductModal';
 
 export function CatalogTab() {
@@ -11,7 +11,6 @@ export function CatalogTab() {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [importing, setImporting] = useState(false);
   const [notification, setNotification] = useState('');
-
   const [errorMessage, setErrorMessage] = useState('');
 
   const fetchProducts = async () => {
@@ -61,7 +60,7 @@ export function CatalogTab() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove "${name}" from the catalog?`)) return;
+    if (!confirm(`Are you sure you want to remove "${name}" from your store catalog?`)) return;
     setErrorMessage('');
     try {
       const res = await fetch(`/api/catalog/${id}`, { method: 'DELETE' });
@@ -78,54 +77,73 @@ export function CatalogTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header Controls */}
-      <div className="p-5 rounded-xl bg-[#0e1e36] border border-slate-800 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="w-5 h-5 text-sky-400" />
+      {/* Figma Signature Story Block: Lilac Ground for Catalog & Pricing Rules */}
+      <div className="p-6 sm:p-8 rounded-lg bg-figma-lilac text-figma-ink border border-black/10 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/10 pb-4">
           <div>
-            <h2 className="text-base font-semibold text-white">Merchant Catalog Management</h2>
-            <p className="text-xs text-slate-400">Configure base and private floor prices for AI buyer agent negotiations</p>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-[11px] font-mono tracking-wider uppercase mb-2">
+              <Package className="w-3.5 h-3.5" /> STORE INVENTORY & BARGAINING
+            </div>
+            <h2 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-figma-ink">
+              Store Catalog & Pricing Rules
+            </h2>
+            <p className="text-xs sm:text-sm text-figma-ink/80 mt-1 max-w-2xl font-medium">
+              Configure public listing prices and secret minimum bargaining floors. AI buyers negotiate within your safe margin rules.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={handleImportRazorpay}
+              disabled={importing}
+              className="flex-1 sm:flex-none h-11 px-5 bg-white hover:bg-figma-surfaceSoft text-figma-ink rounded-full text-xs font-bold transition flex items-center justify-center gap-2 border border-black/15 shadow-xs"
+            >
+              <Download className="w-4 h-4" />
+              {importing ? 'Importing...' : 'Import from Razorpay'}
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedProduct(null);
+                setModalOpen(true);
+              }}
+              className="flex-1 sm:flex-none h-11 px-6 bg-figma-primary hover:opacity-90 text-figma-onPrimary rounded-full text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" /> Add Product
+            </button>
+
+            <button
+              onClick={fetchProducts}
+              className="w-11 h-11 bg-white hover:bg-figma-surfaceSoft border border-black/15 text-figma-ink rounded-full flex items-center justify-center transition shrink-0 shadow-xs"
+              title="Refresh catalog"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={handleImportRazorpay}
-            disabled={importing}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700"
-          >
-            <Download className="w-3.5 h-3.5 text-indigo-400" />
-            {importing ? 'Importing...' : '📥 Prefill from Razorpay'}
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedProduct(null);
-              setModalOpen(true);
-            }}
-            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Add Product
-          </button>
-
-          <button
-            onClick={fetchProducts}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
-            title="Refresh catalog"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Quick Rule Summary Pills */}
+        <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs text-figma-ink">
+          <span className="px-3.5 py-1.5 rounded-full bg-white/80 border border-black/10 font-bold uppercase">
+            3-STAGE CONCESSION LADDER
+          </span>
+          <span className="px-3.5 py-1.5 rounded-full bg-white/80 border border-black/10 font-bold uppercase">
+            100% PRIVATE FLOOR DEFENSE
+          </span>
+          <span className="px-3.5 py-1.5 rounded-full bg-white/80 border border-black/10 font-bold uppercase">
+            ZERO MARGIN LEAKAGE
+          </span>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="p-3.5 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-300 text-xs flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-2 font-medium">
-            <span className="font-bold">Error:</span> {errorMessage}
+        <div className="p-4 rounded-lg bg-figma-pink border border-black/10 text-figma-ink text-xs sm:text-sm flex items-center justify-between font-mono">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">NOTICE:</span> {errorMessage}
           </div>
           <button
             onClick={() => setErrorMessage('')}
-            className="text-rose-400 hover:text-white font-bold text-sm px-1.5"
+            className="hover:opacity-70 font-bold text-sm px-1.5"
           >
             ✕
           </button>
@@ -133,90 +151,181 @@ export function CatalogTab() {
       )}
 
       {notification && (
-        <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-lg bg-figma-mint border border-black/10 text-figma-ink text-xs sm:text-sm flex items-center justify-between font-mono font-medium">
           <span>{notification}</span>
         </div>
       )}
 
-      {/* Catalog Table */}
-      <div className="rounded-xl bg-[#0e1e36] border border-slate-800 overflow-hidden shadow-lg">
+      {/* Catalog Table & Mobile Cards */}
+      <div className="rounded-lg bg-white border border-black/10 overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400">Loading catalog items...</div>
+          <div className="p-8 text-center text-zinc-500 text-xs sm:text-sm font-mono">
+            LOADING STORE PRODUCTS...
+          </div>
         ) : products.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">No products found in catalog. Add your first item!</div>
+          <div className="p-8 text-center text-zinc-500 text-xs sm:text-sm">
+            No products found in catalog. Click "Add Product" or import from Razorpay to get started!
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-[#071324] text-slate-400 uppercase font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="p-4">Product Name</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Base Price</th>
-                  <th className="p-4">
-                    Floor Price <span className="text-[10px] text-amber-400">(Private)</span>
-                  </th>
-                  <th className="p-4">Stock</th>
-                  <th className="p-4">Tags</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {products.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-900/30 transition">
-                    <td className="p-4 font-semibold text-white max-w-xs">
-                      {p.name}
-                      <span className="block text-[11px] text-slate-500 truncate font-normal">{p.description}</span>
-                    </td>
-                    <td className="p-4 capitalize">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+          <>
+            {/* Mobile Product Cards (< 768px) */}
+            <div className="md:hidden divide-y divide-black/5">
+              {products.map((p) => (
+                <div key={p.id} className="p-4 space-y-3 hover:bg-zinc-50 transition">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-figma-ink">
+                        {p.name}
+                      </div>
+                      <span className="inline-block px-2.5 py-0.5 mt-1 rounded-full bg-zinc-100 text-figma-ink text-[11px] uppercase font-mono tracking-wider border border-black/5">
                         {p.category || 'general'}
                       </span>
-                    </td>
-                    <td className="p-4 font-mono font-bold text-white">
-                      ₹{p.formatted_base_price}
-                    </td>
-                    <td className="p-4 font-mono text-amber-400 font-semibold">
-                      ₹{p.formatted_floor_price}
-                    </td>
-                    <td className="p-4 font-mono">
-                      <span className={p.stock > 10 ? 'text-emerald-400' : 'text-amber-400'}>
-                        {p.stock} units
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {Array.isArray(p.tags) &&
-                          p.tags.map((t: string, i: number) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40">
-                              {t}
-                            </span>
-                          ))}
-                      </div>
-                    </td>
-                    <td className="p-4 text-right space-x-2">
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => {
                           setSelectedProduct(p);
                           setModalOpen(true);
                         }}
-                        className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-400 transition"
-                        title="Edit product"
+                        className="p-2 rounded-full bg-white border border-black/10 text-figma-ink hover:bg-zinc-50 transition"
+                        title="Edit product details"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(p.id, p.name)}
-                        className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition"
+                        className="p-2 rounded-full bg-white border border-black/10 text-figma-ink hover:bg-figma-pink transition"
                         title="Delete product"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    </td>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-zinc-600 line-clamp-2">
+                    {p.description}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-zinc-50 border border-black/5">
+                    <div>
+                      <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Listing Price</div>
+                      <div className="text-base font-extrabold text-figma-ink mt-0.5">₹{p.formatted_base_price}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-figma-ink font-mono uppercase tracking-wider flex items-center gap-1">
+                        <Lock className="w-2.5 h-2.5" /> Secret Floor
+                      </div>
+                      <div className="text-base font-extrabold text-figma-ink mt-0.5">₹{p.formatted_floor_price}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-0.5 text-xs font-mono">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${p.stock > 10 ? 'bg-figma-mint/50 text-figma-ink border border-black/5' : 'bg-figma-coral/50 text-figma-ink border border-black/5'}`}>
+                      {p.stock} IN STOCK
+                    </span>
+                    <div className="flex flex-wrap gap-1 max-w-[60%] justify-end">
+                      {Array.isArray(p.tags) &&
+                        p.tags.slice(0, 3).map((t: string, i: number) => (
+                          <span
+                            key={i}
+                            className="text-[10px] px-2 py-0.5 rounded-full bg-white text-zinc-600 border border-black/5 font-mono"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      {Array.isArray(p.tags) && p.tags.length > 3 && (
+                        <span className="text-[10px] text-zinc-400 self-center font-mono">
+                          +{p.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop & Tablet Table (>= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm text-figma-ink">
+                <thead className="bg-zinc-50 text-zinc-500 uppercase font-mono text-[11px] tracking-wider border-b border-black/5">
+                  <tr>
+                    <th className="p-4">Product Details</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Listing Price</th>
+                    <th className="p-4">
+                      Minimum Secret Price <span className="text-[10px] text-zinc-500 font-mono uppercase">(Private)</span>
+                    </th>
+                    <th className="p-4">Stock</th>
+                    <th className="p-4">Discovery Tags</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {products.map((p) => (
+                    <tr key={p.id} className="hover:bg-zinc-50 transition">
+                      <td className="p-4 font-bold text-figma-ink max-w-xs text-xs sm:text-sm">
+                        {p.name}
+                        <span className="block text-xs text-zinc-500 truncate font-normal mt-0.5">
+                          {p.description}
+                        </span>
+                      </td>
+                      <td className="p-4 capitalize">
+                        <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 text-figma-ink border border-black/5 text-xs font-mono uppercase tracking-wider">
+                          {p.category || 'general'}
+                        </span>
+                      </td>
+                      <td className="p-4 font-extrabold text-figma-ink text-sm sm:text-base">
+                        ₹{p.formatted_base_price}
+                      </td>
+                      <td className="p-4 font-extrabold text-figma-ink text-sm sm:text-base">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-figma-pink/60 border border-black/5 text-xs font-mono">
+                          <Lock className="w-3 h-3" />
+                          ₹{p.formatted_floor_price}
+                        </span>
+                      </td>
+                      <td className="p-4 text-xs sm:text-sm">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold ${p.stock > 10 ? 'bg-figma-mint/50 text-figma-ink border border-black/5' : 'bg-figma-coral/50 text-figma-ink border border-black/5'}`}>
+                          {p.stock} units
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {Array.isArray(p.tags) &&
+                            p.tags.map((t: string, i: number) => (
+                              <span
+                                key={i}
+                                className="text-[11px] px-2.5 py-0.5 rounded-full bg-white text-zinc-700 border border-black/10 font-mono"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                        </div>
+                      </td>
+                      <td className="p-4 text-right space-x-1.5">
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setModalOpen(true);
+                          }}
+                          className="p-2 rounded-full bg-white hover:bg-zinc-50 text-figma-ink transition border border-black/10"
+                          title="Edit product details"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          className="p-2 rounded-full bg-white hover:bg-figma-pink text-figma-ink transition border border-black/10"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -229,3 +338,6 @@ export function CatalogTab() {
     </div>
   );
 }
+
+
+

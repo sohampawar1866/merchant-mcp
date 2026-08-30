@@ -62,7 +62,7 @@ func NewClient(keyID, keySecret string) *Client {
 		keySecret: keySecret,
 		baseURL:   "https://api.razorpay.com/v1",
 		client: &http.Client{
-			Timeout: 15 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 	}
 }

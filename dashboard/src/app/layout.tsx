@@ -2,8 +2,17 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AgenticCheckout Merchant Control Plane | Razorpay',
-  description: 'AI Buyer Agent Gateway & Merchant Command Center',
+  title: 'AgenticCheckout Control Plane',
+  description: 'Autonomous Buyer Agent Gateway & Merchant Control Plane',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/favicon.ico', sizes: '16x16', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -12,10 +21,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#071324] text-slate-100 antialiased">
+    <html lang="en">
+      <body className="min-h-screen bg-figma-canvas text-figma-ink antialiased selection:bg-figma-primary selection:text-white">
         {children}
       </body>
     </html>
   );
 }
+

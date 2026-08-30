@@ -30,7 +30,7 @@ export async function GET() {
 
     const formattedTransactions = result.rows.map((row) => ({
       ...row,
-      formatted_price: (row.agreed_price / 100).toFixed(2),
+      formatted_price: Math.round(row.agreed_price / 100).toLocaleString('en-IN'),
     }));
 
     return NextResponse.json({

@@ -16,8 +16,8 @@ export async function GET() {
 
     const formatted = result.rows.map((row) => ({
       ...row,
-      formatted_base_price: (row.base_price / 100).toFixed(2),
-      formatted_floor_price: (row.floor_price / 100).toFixed(2),
+      formatted_base_price: Math.round(row.base_price / 100).toLocaleString('en-IN'),
+      formatted_floor_price: Math.round(row.floor_price / 100).toLocaleString('en-IN'),
     }));
 
     return NextResponse.json({ products: formatted, total: formatted.length });
