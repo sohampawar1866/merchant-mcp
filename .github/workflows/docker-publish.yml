@@ -1,0 +1,70 @@
+name: Build and Publish Container Packages
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Run Unit Tests
+        run: |
+          go test -v ./server/audit/ ./server/cache/ ./server/pricing/ ./server/webhook/
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Gateway Server
+        id: meta-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-server
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+
+      - name: Build and push Gateway Server Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+
+      - name: Extract metadata for Merchant Dashboard
+        id: meta-dashboard
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-dashboard
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+
+      - name: Build and push Dashboard Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./dashboard
+          file: ./dashboard/Dockerfile
+          push: true
+          tags: ${{ steps.meta-dashboard.outputs.tags }}
+          labels: ${{ steps.meta-dashboard.outputs.labels }}
