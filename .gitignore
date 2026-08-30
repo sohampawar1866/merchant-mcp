@@ -1,0 +1,34 @@
+# Binaries
+/bin/
+/cmd
+*.exe
+*.out
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+
+# Docker
+docker-compose.override.yml
+
+# Node & Next.js
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/dist/
+node_modules/
+# Planning & GSD
+.planning/

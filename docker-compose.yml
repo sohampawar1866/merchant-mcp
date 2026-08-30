@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: merchant-mcp-postgres
+    environment:
+      POSTGRES_USER: agentic
+      POSTGRES_PASSWORD: agentic
+      POSTGRES_DB: agentic_checkout
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic -d agentic_checkout"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: merchant-mcp-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: merchant-mcp-server
+    environment:
+      DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      PORT: "8080"
+      MCP_TRANSPORT: "streamablehttp"
+      ENABLE_FIND_AND_PRICE: "true"
+      ENABLE_NEGOTIATION: "true"
+      ENABLE_HUMAN_APPROVAL: "false"
+      MAX_NEGOTIATION_ATTEMPTS: "3"
+      ENABLE_CATALOG_CACHE: "true"
+      AUDIT_LOG_LEVEL: "full"
+      WEBHOOK_STRICT_MODE: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: merchant-mcp-dashboard
+    environment:
+      DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
