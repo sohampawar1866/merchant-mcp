@@ -29,12 +29,18 @@ docker pull ghcr.io/sohampawar1866/merchant-mcp-server:latest
 docker pull ghcr.io/sohampawar1866/merchant-mcp-dashboard:latest
 ```
 
-Launch all services using the pre-built packages:
+Launch all services using the pre-built packages (defaults to `streamablehttp` transport):
 ```bash
 docker compose up -d
 ```
 - **Merchant Dashboard**: `http://localhost:3000`
-- **MCP Gateway Endpoint**: `http://localhost:8080` (StreamableHTTP / SSE / JSON-RPC)
+- **MCP Gateway Endpoint**: `http://localhost:8080/mcp` (StreamableHTTP, default)
+
+Override transport at run time without changing any code:
+```bash
+MCP_TRANSPORT=sse docker compose up -d      # SSE transport
+MCP_TRANSPORT=stdio docker compose up -d    # stdio (Claude Desktop)
+```
 
 ---
 
@@ -59,9 +65,16 @@ docker compose up -d
    RAZORPAY_KEY_SECRET=...
    RAZORPAY_WEBHOOK_SECRET=agentic_checkout_secret_2026
    ```
-3. Start the Go MCP server:
+3. Start the Go MCP server (defaults to `streamablehttp` on `:8080`):
    ```bash
    go run ./server/cmd/
+   ```
+   Override transport via `--transport` flag (takes highest precedence):
+   ```bash
+   go run ./server/cmd/ --transport=streamablehttp   # default
+   go run ./server/cmd/ --transport=sse
+   go run ./server/cmd/ --transport=stdio            # for Claude Desktop
+   go run ./server/cmd/ --transport=sse --port=9090  # custom port
    ```
 4. Start the Next.js Dashboard in another terminal:
    ```bash
@@ -130,7 +143,7 @@ flowchart LR
         Webhook["Razorpay Webhook\n(HMAC-SHA256)"]
     end
 
-    LLM <-->|JSON-RPC / stdio / SSE| MCP
+    LLM <-->|StreamableHTTP / SSE / stdio| MCP
     MCP --> Composite
     MCP --> Catalog
     MCP --> Pricing
@@ -168,8 +181,8 @@ go test ./server/tools/ -run TestE2E -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8080` | Server HTTP port |
-| `MCP_TRANSPORT` | `stdio` | Transport protocol: `stdio`, `sse`, or `streamablehttp` |
+| `PORT` | `8080` | Server HTTP port (also overridable via `--port` flag) |
+| `MCP_TRANSPORT` | `streamablehttp` | Transport: `streamablehttp` \| `sse` \| `stdio` (also overridable via `--transport` flag) |
 | `DATABASE_URL` | `postgres://agentic:agentic@localhost:5432/agentic_checkout?sslmode=disable` | PostgreSQL connection URI |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection URI |
 | `RAZORPAY_KEY_ID` | `""` | Razorpay Key ID |
@@ -182,6 +195,18 @@ go test ./server/tools/ -run TestE2E -v
 | `MAX_TOOL_CALLS_PER_MINUTE` | `30` | Session rate limiting threshold |
 | `WEBHOOK_STRICT_MODE` | `true` | Reject invalid webhook HMAC signatures with HTTP 400 |
 | `AUDIT_LOG_LEVEL` | `full` | Audit logging level (`full` or `decisions_only`) |
+
+### Transport Precedence
+
+```
+--transport flag  >  MCP_TRANSPORT env var  >  default (streamablehttp)
+```
+
+| Transport | Endpoint | Recommended For |
+|-----------|----------|-----------------|
+| `streamablehttp` *(default)* | `POST http://localhost:8080/mcp` | Claude.ai, Cursor, remote agents |
+| `sse` | `http://localhost:8080/sse` | Older web-based MCP clients |
+| `stdio` | stdin/stdout (no HTTP) | Claude Desktop local install |
 
 ---
 

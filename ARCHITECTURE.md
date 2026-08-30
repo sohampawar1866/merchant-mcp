@@ -58,7 +58,18 @@ graph TD
 ```
 
 ### 2.1 Model Context Protocol (MCP)
-AgenticCheckout implements the official **Model Context Protocol (2024-11-05 specification)** using `mark3labs/mcp-go`. MCP is the de facto open standard for AI agents to discover server capabilities, inspect tool JSON schemas, and invoke structured operations over `stdio`, `sse`, or `streamablehttp` transports.
+AgenticCheckout implements the official **Model Context Protocol (2024-11-05 specification)** using `mark3labs/mcp-go`. MCP is the de facto open standard for AI agents to discover server capabilities, inspect tool JSON schemas, and invoke structured operations over `streamablehttp` (default), `sse`, or `stdio` transports.
+
+The active transport is controlled via a **three-level precedence chain**:
+```
+--transport flag  >  MCP_TRANSPORT env var  >  default (streamablehttp)
+```
+
+| Transport | Endpoint | Use Case |
+|-----------|----------|----------|
+| `streamablehttp` *(default)* | `POST :8080/mcp` | Claude.ai, Cursor, remote agents |
+| `sse` | `:8080/sse` | Older web-based MCP clients |
+| `stdio` | stdin/stdout | Claude Desktop local install |
 
 ### 2.2 NPCI UAP & Indian Agentic Commerce Pilots
 India is leading global agentic commerce experimentation through the **National Payments Corporation of India (NPCI) Unified Authentication Protocol (UAP)** pilots (collaborating with OpenAI and Indian fintech leaders). While UAP formalizes user authorization frameworks on UPI, AgenticCheckout provides the **merchant-side transaction endpoint** that accepts agent intents, evaluates merchant margin rules, and provisions UPI-compatible checkout links.
@@ -198,7 +209,7 @@ flowchart TB
         RZP_Hooks["Webhook Events\n(payment.captured, order.paid)"]
     end
 
-    Agent <-->|JSON-RPC / stdio / SSE| MCP_Server
+    Agent<->>MCP_Server: JSON-RPC over StreamableHTTP / SSE / stdio
     Tools <--> Storage
     T5 --> RZP_Orders & RZP_Links
     RZP_Hooks -->|POST /webhook/razorpay| Webhook
