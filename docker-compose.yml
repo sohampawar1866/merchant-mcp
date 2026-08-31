@@ -42,7 +42,7 @@ services:
       # Transport: streamablehttp (default) | sse | stdio
       # Override at run time: MCP_TRANSPORT=sse docker compose up -d
       MCP_TRANSPORT: "${MCP_TRANSPORT:-streamablehttp}"
-      MERCHANT_API_KEY: "${MERCHANT_API_KEY:-mc_live_demo_store_1}"
+      MERCHANT_API_KEY: "${MERCHANT_API_KEY:-demo-key-1}"
       ENABLE_FIND_AND_PRICE: "true"
       ENABLE_NEGOTIATION: "true"
       ENABLE_HUMAN_APPROVAL: "false"
