@@ -21,14 +21,18 @@ You can run AgenticCheckout via **Native Desktop App (Wails)**, **Pre-built GitH
 
 ### Option 0: Native Desktop App (Fastest & Simplest GUI)
 
-Launch the self-contained native desktop app (`installer/build/bin/AgenticCheckout.app`, ~8MB):
+Download the self-contained native desktop app from [**GitHub Releases v1.0.0**](https://github.com/sohampawar1866/merchant-mcp/releases/latest):
+- **macOS Disk Image**: [**Download `AgenticCheckout-macOS-arm64.dmg` (3.9 MB)**](https://github.com/sohampawar1866/merchant-mcp/releases/download/v1.0.0/AgenticCheckout-macOS-arm64.dmg)
+- **macOS App Archive**: [**Download `AgenticCheckout-macOS-arm64.zip` (3.5 MB)**](https://github.com/sohampawar1866/merchant-mcp/releases/download/v1.0.0/AgenticCheckout-macOS-arm64.zip)
+
+**Desktop App Features:**
 - Automatically detects if Docker Desktop is installed and running (with one-click launch / install helper)
 - Setup wizard to enter Razorpay credentials with password masking and validation
 - Configures MCP Transport (`streamablehttp`, `sse`, `stdio`) and ports
 - Atomically generates `.env` and orchestrates Docker containers with real-time log streaming
 
 ```bash
-# Launch on macOS
+# Or launch locally from repository
 open installer/build/bin/AgenticCheckout.app
 ```
 
