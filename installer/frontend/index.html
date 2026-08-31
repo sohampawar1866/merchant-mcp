@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgenticCheckout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <!-- Drag bar for macOS/Windows -->
+  <div class="window-drag-region" style="--wails-draggable: drag"></div>
+
+  <div class="app-container">
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="brand">
+        <svg class="zap-icon" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span class="brand-name">AgenticCheckout</span>
+      </div>
+      <div class="version-badge">v1.0.0</div>
+    </header>
+
+    <!-- Main Scroll Content -->
+    <main class="main-content">
+      <!-- Title Section -->
+      <section class="hero-section">
+        <div class="eyebrow">SETUP WIZARD</div>
+        <h1 class="hero-title">Connect Your Store</h1>
+        <p class="hero-desc">Configure your autonomous AI checkout gateway and credentials.</p>
+      </section>
+
+      <form id="setupForm" onsubmit="return false;">
+        <!-- Section 1: Razorpay Credentials -->
+        <div class="form-card card-lime">
+          <div class="card-header">
+            <div class="card-title">Razorpay Credentials</div>
+            <button type="button" class="link-btn" id="openRazorpayBtn">Open API Keys ↗</button>
+          </div>
+
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="keyId">Key ID <span class="req">*</span></label>
+              <input type="text" id="keyId" placeholder="rzp_test_..." autocomplete="off" spellcheck="false" required />
+            </div>
+
+            <div class="field-group">
+              <label for="keySecret">Key Secret <span class="req">*</span></label>
+              <div class="password-wrapper">
+                <input type="password" id="keySecret" placeholder="••••••••••••••••" autocomplete="off" required />
+                <button type="button" class="eye-toggle" id="toggleSecretBtn">👁</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group mt-3">
+            <label for="webhookSecret">Webhook Secret</label>
+            <input type="text" id="webhookSecret" value="agentic_checkout_secret_2026" autocomplete="off" spellcheck="false" />
+            <span class="field-hint">Used to verify payment.captured webhook signatures from Razorpay.</span>
+          </div>
+        </div>
+
+        <!-- Section 2: MCP Transport -->
+        <div class="form-card card-lilac mt-4">
+          <div class="card-title mb-2">MCP Transport Protocol</div>
+          <div class="transport-options">
+            <label class="transport-pill active" data-transport="streamablehttp">
+              <input type="radio" name="transport" value="streamablehttp" checked />
+              <span class="radio-dot"></span>
+              <span class="pill-text"><strong>streamablehttp</strong> (Recommended)</span>
+            </label>
+            <label class="transport-pill" data-transport="sse">
+              <input type="radio" name="transport" value="sse" />
+              <span class="radio-dot"></span>
+              <span class="pill-text">sse</span>
+            </label>
+            <label class="transport-pill" data-transport="stdio">
+              <input type="radio" name="transport" value="stdio" />
+              <span class="radio-dot"></span>
+              <span class="pill-text">stdio (Claude Desktop)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section 3: Port Configuration -->
+        <div class="form-card card-mint mt-4">
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="port">Gateway HTTP Port</label>
+              <input type="number" id="port" value="8080" min="1024" max="65535" />
+            </div>
+            <div class="field-group">
+              <label>Dashboard Port</label>
+              <input type="text" value="3000" disabled class="input-disabled" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Docker Status Alert Card -->
+        <div id="dockerStatusCard" class="docker-banner banner-checking mt-4">
+          <div class="docker-status-left">
+            <span id="dockerDot" class="status-indicator"></span>
+            <span id="dockerMessage">Checking Docker environment...</span>
+          </div>
+          <div id="dockerActionArea"></div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="action-area mt-4">
+          <button type="submit" id="startBtn" class="primary-btn" disabled>
+            <span id="btnText">Start AgenticCheckout →</span>
+            <span id="btnSpinner" class="spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Live Logs & Progress Console -->
+      <div id="logSection" class="log-container hidden mt-4">
+        <div class="log-header">
+          <span>CONTAINER LAUNCH LOGS</span>
+          <button type="button" id="toggleLogsBtn" class="link-btn">Clear</button>
+        </div>
+        <pre id="logTerminal"></pre>
+      </div>
+
+      <!-- Success Action Panel -->
+      <div id="successCard" class="success-panel hidden mt-4">
+        <div class="success-icon">✓</div>
+        <div>
+          <h3 class="success-title">Storefront Active & Guarded</h3>
+          <p class="success-desc">Next.js Merchant Plane & Go MCP Gateway running successfully.</p>
+          <div class="success-actions mt-3">
+            <button type="button" id="openDashboardBtn" class="open-btn">
+              Open Dashboard (localhost:3000) ↗
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
