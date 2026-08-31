@@ -293,6 +293,50 @@ func (c *Client) CreatePaymentLinkWithAuth(ctx context.Context, req CreatePaymen
 	return &linkResp, nil
 }
 
+// FetchPaymentLinkWithAuth fetches live payment link status using explicit credentials.
+func (c *Client) FetchPaymentLinkWithAuth(ctx context.Context, linkID, keyID, keySecret string) (*PaymentLinkResponse, error) {
+	effectiveKey := keyID
+	if effectiveKey == "" {
+		effectiveKey = c.keyID
+	}
+	effectiveSecret := keySecret
+	if effectiveSecret == "" {
+		effectiveSecret = c.keySecret
+	}
+
+	if effectiveKey == "" || effectiveSecret == "" {
+		return nil, fmt.Errorf("razorpay: API credentials missing")
+	}
+
+	url := fmt.Sprintf("%s/payment_links/%s", c.baseURL, linkID)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := fmt.Sprintf("%s:%s", effectiveKey, effectiveSecret)
+	encoded := base64.StdEncoding.EncodeToString([]byte(auth))
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Basic %s", encoded))
+
+	resp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("razorpay: fetch payment link failed with HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var linkResp PaymentLinkResponse
+	if err := json.Unmarshal(respBody, &linkResp); err != nil {
+		return nil, err
+	}
+
+	return &linkResp, nil
+}
+
 func (c *Client) setAuthHeader(req *http.Request) {
 	auth := fmt.Sprintf("%s:%s", c.keyID, c.keySecret)
 	encoded := base64.StdEncoding.EncodeToString([]byte(auth))

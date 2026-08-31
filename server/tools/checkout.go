@@ -382,6 +382,25 @@ func handleCheckOrderStatus(
 			return mcp.NewToolResultError(fmt.Sprintf("database query failed: %v", err)), nil
 		}
 
+		// If status is not marked as paid, poll Razorpay API live for immediate sync
+		if status != "paid" && rzpClient != nil && razorpayOrderID != "" {
+			if linkResp, err := rzpClient.FetchPaymentLinkWithAuth(ctx, razorpayOrderID, merchant.RazorpayKeyID, merchant.RazorpayKeySecret); err == nil && linkResp != nil {
+				if linkResp.Status == "paid" {
+					status = "paid"
+					_, _ = pool.Exec(ctx, `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1;`, id)
+					_ = auditLogger.Log(ctx, audit.Entry{
+						MerchantID:    merchant.ID,
+						CorrelationID: correlationID,
+						ToolName:      "check_order_status_sync",
+						Input:         inputArgs,
+						Decision:      "paid",
+						ReasonCode:    "PAYMENT_CAPTURED_POLL",
+						DurationMs:    time.Since(start).Milliseconds(),
+					})
+				}
+			}
+		}
+
 		response := CheckOrderStatusResponse{
 			OrderID:     razorpayOrderID,
 			Status:      status,
