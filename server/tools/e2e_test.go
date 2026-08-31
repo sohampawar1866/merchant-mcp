@@ -46,6 +46,7 @@ func TestE2E_CompleteAgentCommerceJourney(t *testing.T) {
 	rzpClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
 	cacheInstance, _ := cache.NewCache("")
 	webhookSecret := "e2e_webhook_secret_key"
+	_ = db.UpdateStoreSetting(ctx, pool, "razorpay_webhook_secret", webhookSecret)
 	webhookReceiver := webhook.NewReceiver(pool, auditLogger, webhookSecret, true)
 
 	findAndPriceHandler := handleFindAndPrice(pool, auditLogger, cfg)

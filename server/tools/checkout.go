@@ -221,16 +221,20 @@ func handleCreateCheckout(
 			return mcp.NewToolResultError(errOutput), nil
 		}
 
-		// 4. Create Razorpay Payment Link / Order
-		upiLink := (cfg.CheckoutDeliveryMode == "upi_link")
-		linkResp, err := rzpClient.CreatePaymentLink(ctx, razorpay.CreatePaymentLinkRequest{
+		// 4. Create Razorpay Payment Link / Order with dynamic store credentials
+		keyID := db.GetSettingString(ctx, pool, "razorpay_key_id", cfg.RazorpayKeyID)
+		keySecret := db.GetSettingString(ctx, pool, "razorpay_key_secret", cfg.RazorpayKeySecret)
+		deliveryMode := db.GetSettingString(ctx, pool, "checkout_delivery_mode", cfg.CheckoutDeliveryMode)
+		upiLink := (deliveryMode == "upi_link")
+
+		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, razorpay.CreatePaymentLinkRequest{
 			Amount:        agreedPrice,
 			Currency:      "INR",
 			Description:   fmt.Sprintf("Purchase of %s", productName),
 			CustomerPhone: customerPhone,
 			CustomerEmail: customerEmail,
 			UPILink:       upiLink,
-		})
+		}, keyID, keySecret)
 		if err != nil {
 			errOutput := fmt.Sprintf("razorpay payment link creation failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{

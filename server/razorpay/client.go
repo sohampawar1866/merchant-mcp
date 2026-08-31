@@ -216,6 +216,83 @@ func (c *Client) FetchOrder(ctx context.Context, orderID string) (*OrderResponse
 	return &orderResp, nil
 }
 
+// CreatePaymentLinkWithAuth creates a Razorpay payment link using explicit dynamic credentials.
+func (c *Client) CreatePaymentLinkWithAuth(ctx context.Context, req CreatePaymentLinkRequest, keyID, keySecret string) (*PaymentLinkResponse, error) {
+	effectiveKey := keyID
+	if effectiveKey == "" {
+		effectiveKey = c.keyID
+	}
+	effectiveSecret := keySecret
+	if effectiveSecret == "" {
+		effectiveSecret = c.keySecret
+	}
+
+	if effectiveKey == "" || effectiveSecret == "" {
+		return nil, fmt.Errorf("razorpay: API credentials missing. Please set Razorpay Key ID and Key Secret in Store Policies")
+	}
+
+	if req.Currency == "" {
+		req.Currency = "INR"
+	}
+	if req.Amount <= 0 {
+		return nil, fmt.Errorf("razorpay: invalid payment link amount (%d paise)", req.Amount)
+	}
+
+	url := fmt.Sprintf("%s/payment_links", c.baseURL)
+	payload := map[string]any{
+		"amount":      req.Amount,
+		"currency":    req.Currency,
+		"description": req.Description,
+		"notify": map[string]bool{
+			"sms":   false,
+			"email": false,
+		},
+	}
+	if req.UPILink {
+		payload["upi_link"] = true
+	}
+	if req.CustomerPhone != "" || req.CustomerEmail != "" {
+		payload["customer"] = map[string]string{
+			"name":    req.CustomerName,
+			"email":   req.CustomerEmail,
+			"contact": req.CustomerPhone,
+		}
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("razorpay: failed to marshal payment link payload: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("razorpay: failed to create request: %w", err)
+	}
+
+	auth := fmt.Sprintf("%s:%s", effectiveKey, effectiveSecret)
+	encoded := base64.StdEncoding.EncodeToString([]byte(auth))
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Basic %s", encoded))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("razorpay: http call failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("razorpay: payment_links API returned HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var linkResp PaymentLinkResponse
+	if err := json.Unmarshal(respBody, &linkResp); err != nil {
+		return nil, fmt.Errorf("razorpay: failed to unmarshal link response: %w", err)
+	}
+
+	return &linkResp, nil
+}
+
 func (c *Client) setAuthHeader(req *http.Request) {
 	auth := fmt.Sprintf("%s:%s", c.keyID, c.keySecret)
 	encoded := base64.StdEncoding.EncodeToString([]byte(auth))

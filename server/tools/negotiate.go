@@ -13,6 +13,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
+	"github.com/sohampawar1866/merchant-mcp/server/db"
 	"github.com/sohampawar1866/merchant-mcp/server/pricing"
 )
 

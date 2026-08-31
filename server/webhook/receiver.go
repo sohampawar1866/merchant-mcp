@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/db"
 )
 
 // RazorpayWebhookEvent defines the minimal payload structure from Razorpay webhooks.
@@ -87,12 +88,15 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	signature := r.Header.Get("X-Razorpay-Signature")
 
-	// 1. Signature Verification
-	if rec.secret != "" {
-		valid := VerifySignature(bodyBytes, signature, rec.secret)
+	// 1. Dynamic Signature Verification from store_settings
+	activeSecret := db.GetSettingString(r.Context(), rec.pool, "razorpay_webhook_secret", rec.secret)
+	activeStrictMode := db.GetSettingBool(r.Context(), rec.pool, "webhook_strict_mode", rec.strictMode)
+
+	if activeSecret != "" {
+		valid := VerifySignature(bodyBytes, signature, activeSecret)
 		if !valid {
 			log.Printf("webhook: invalid HMAC signature received: %s", signature)
-			if rec.strictMode {
+			if activeStrictMode {
 				_ = rec.auditLogger.Log(r.Context(), audit.Entry{
 					CorrelationID: correlationID,
 					ToolName:      "webhook_razorpay",

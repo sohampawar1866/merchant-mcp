@@ -18,6 +18,10 @@ export async function GET() {
       );
 
       INSERT INTO store_settings (key, value, description, category) VALUES
+        ('razorpay_key_id', '', 'Razorpay API Key ID for orders & checkout links', 'credentials'),
+        ('razorpay_key_secret', '', 'Razorpay API Key Secret', 'credentials'),
+        ('razorpay_webhook_secret', 'agentic_checkout_secret_2026', 'HMAC SHA-256 secret for verifying payment webhooks', 'credentials'),
+        ('mcp_transport', 'streamablehttp', 'Active MCP transport protocol (streamablehttp, sse, or stdio)', 'transport'),
         ('enable_find_and_price', 'true', 'Enable AI natural language product intent search & price matching', 'features'),
         ('enable_negotiation', 'true', 'Enable autonomous price bargaining and discount concession ladder', 'features'),
         ('enable_human_approval', 'false', 'Require human merchant manual approval for all discount proposals', 'guardrails'),
