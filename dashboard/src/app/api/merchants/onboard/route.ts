@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       INSERT INTO merchants (
         id, name, razorpay_key_id, razorpay_key_secret, razorpay_webhook_secret, status, feature_overrides, api_key, created_at
       ) VALUES (
-        $1, $2, $3, pgp_sym_encrypt($4, $5), pgp_sym_encrypt($6, $5), 'active', '{}'::jsonb, $7, NOW()
+        $1, $2, $3, pgp_sym_encrypt($4, $6), pgp_sym_encrypt($5, $6), 'active', '{}'::jsonb, $7, NOW()
       )
       RETURNING id, name, razorpay_key_id, status, api_key, created_at;
     `;
