@@ -12,6 +12,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/auth"
+	"github.com/sohampawar1866/merchant-mcp/server/config"
 )
 
 // PublicProduct defines the public consumer representation of a product.
@@ -34,11 +36,11 @@ type SearchCatalogResponse struct {
 }
 
 // RegisterCatalogTools registers search_catalog and get_product_details on the MCP server.
-func RegisterCatalogTools(s *server.MCPServer, pool *pgxpool.Pool, auditLogger *audit.Logger) {
+func RegisterCatalogTools(s *server.MCPServer, pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *config.Config) {
 	// 1. Tool: search_catalog
 	searchTool := mcp.NewTool(
 		"search_catalog",
-		mcp.WithDescription("Search products in the merchant catalog by keyword, tags, category, or maximum price. Read-only and safe."),
+		mcp.WithDescription("Search products in the merchant catalog by keyword, tags, category, or maximum price. Scoped to the authenticated merchant store."),
 		mcp.WithString("query",
 			mcp.Description("Search terms to match against product name, description, and tags (e.g. 'earbuds with good bass', 'wireless')"),
 		),
@@ -51,25 +53,41 @@ func RegisterCatalogTools(s *server.MCPServer, pool *pgxpool.Pool, auditLogger *
 		mcp.WithNumber("limit",
 			mcp.Description("Maximum number of products to return (default 10, max 50)"),
 		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key (defaults to active store or environment key)"),
+		),
 	)
-	s.AddTool(searchTool, handleSearchCatalog(pool, auditLogger))
+	s.AddTool(searchTool, handleSearchCatalog(pool, auditLogger, cfg))
 
 	// 2. Tool: get_product_details
 	detailsTool := mcp.NewTool(
 		"get_product_details",
-		mcp.WithDescription("Fetch complete product details and specifications by product UUID. Read-only and cacheable."),
+		mcp.WithDescription("Fetch complete product details and specifications by product UUID. Scoped to the authenticated merchant store."),
 		mcp.WithString("product_id",
 			mcp.Required(),
 			mcp.Description("The UUID of the product to retrieve"),
 		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key"),
+		),
 	)
-	s.AddTool(detailsTool, handleGetProductDetails(pool, auditLogger))
+	s.AddTool(detailsTool, handleGetProductDetails(pool, auditLogger, cfg))
 }
 
-func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger) server.ToolHandlerFunc {
+func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *config.Config) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		correlationID := uuid.New()
+
+		// Central Merchant Authentication & Platform Kill Switch check
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 
 		query := request.GetString("query", "")
 		category := request.GetString("category", "")
@@ -82,10 +100,11 @@ func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger) server.T
 		}
 
 		inputArgs := map[string]any{
-			"query":     query,
-			"category":  category,
-			"max_price": maxPrice,
-			"limit":     limit,
+			"merchant_id": merchant.ID,
+			"query":       query,
+			"category":    category,
+			"max_price":   maxPrice,
+			"limit":       limit,
 		}
 
 		if pool == nil {
@@ -94,26 +113,28 @@ func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger) server.T
 			return mcp.NewToolResultText(string(respBytes)), nil
 		}
 
-		// Parameterized full-text, substring ILIKE, and tags array search
+		// Parameterized full-text, substring ILIKE, and tags array search strictly scoped by merchant_id
 		sqlQuery := `
 			SELECT id, name, description, category, tags, base_price, stock, attributes
 			FROM products
-			WHERE ($1 = '' OR (
-				to_tsvector('english', name || ' ' || COALESCE(description, '')) @@ plainto_tsquery('english', $1)
-				OR name ILIKE '%' || $1 || '%'
-				OR description ILIKE '%' || $1 || '%'
-				OR $1 = ANY(tags)
+			WHERE merchant_id = $1
+			AND ($2 = '' OR (
+				to_tsvector('english', name || ' ' || COALESCE(description, '')) @@ plainto_tsquery('english', $2)
+				OR name ILIKE '%' || $2 || '%'
+				OR description ILIKE '%' || $2 || '%'
+				OR $2 = ANY(tags)
 			))
-			AND ($2 = '' OR LOWER(category) = LOWER($2))
-			AND ($3 = 0 OR base_price <= $3)
+			AND ($3 = '' OR LOWER(category) = LOWER($3))
+			AND ($4 = 0 OR base_price <= $4)
 			ORDER BY base_price ASC
-			LIMIT $4;
+			LIMIT $5;
 		`
 
-		rows, err := pool.Query(ctx, sqlQuery, query, category, maxPrice, limit)
+		rows, err := pool.Query(ctx, sqlQuery, merchant.ID, query, category, maxPrice, limit)
 		if err != nil {
 			errOutput := fmt.Sprintf("database query failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "search_catalog",
 				Input:         inputArgs,
@@ -163,6 +184,7 @@ func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger) server.T
 		}
 
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "search_catalog",
 			Input:         inputArgs,
@@ -175,10 +197,20 @@ func handleSearchCatalog(pool *pgxpool.Pool, auditLogger *audit.Logger) server.T
 	}
 }
 
-func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) server.ToolHandlerFunc {
+func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *config.Config) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		correlationID := uuid.New()
+
+		// Central Merchant Authentication & Platform Kill Switch check
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 
 		productID, err := request.RequireString("product_id")
 		if err != nil {
@@ -186,7 +218,8 @@ func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) serv
 		}
 
 		inputArgs := map[string]any{
-			"product_id": productID,
+			"merchant_id": merchant.ID,
+			"product_id":  productID,
 		}
 
 		if pool == nil {
@@ -196,14 +229,14 @@ func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) serv
 		sqlQuery := `
 			SELECT id, name, description, category, tags, base_price, stock, attributes
 			FROM products
-			WHERE id = $1;
+			WHERE id = $1 AND merchant_id = $2;
 		`
 
 		var p PublicProduct
 		var attrBytes []byte
 		var tags []string
 
-		err = pool.QueryRow(ctx, sqlQuery, productID).Scan(
+		err = pool.QueryRow(ctx, sqlQuery, productID, merchant.ID).Scan(
 			&p.ID,
 			&p.Name,
 			&p.Description,
@@ -216,6 +249,7 @@ func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) serv
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				_ = auditLogger.Log(ctx, audit.Entry{
+					MerchantID:    merchant.ID,
 					CorrelationID: correlationID,
 					ToolName:      "get_product_details",
 					Input:         inputArgs,
@@ -223,11 +257,12 @@ func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) serv
 					ReasonCode:    "PRODUCT_NOT_FOUND",
 					DurationMs:    time.Since(start).Milliseconds(),
 				})
-				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s", productID)), nil
+				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s in store: %s", productID, merchant.Name)), nil
 			}
 
 			errOutput := fmt.Sprintf("database query failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "get_product_details",
 				Input:         inputArgs,
@@ -249,6 +284,7 @@ func handleGetProductDetails(pool *pgxpool.Pool, auditLogger *audit.Logger) serv
 		}
 
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "get_product_details",
 			Input:         inputArgs,

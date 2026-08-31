@@ -8,9 +8,10 @@ interface ProductModalProps {
   onClose: () => void;
   onSaved: () => void;
   product?: any;
+  merchantId: string;
 }
 
-export function ProductModal({ isOpen, onClose, onSaved, product }: ProductModalProps) {
+export function ProductModal({ isOpen, onClose, onSaved, product, merchantId }: ProductModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('audio');
@@ -56,11 +57,11 @@ export function ProductModal({ isOpen, onClose, onSaved, product }: ProductModal
       const res = await fetch('/api/tagger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, merchant_id: merchantId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'AI helper encountered an error');
+        throw new Error(data.message || data.error || 'AI helper encountered an error');
       }
       if (data.category) setCategory(data.category);
       if (data.suggested_tags && Array.isArray(data.suggested_tags)) {
@@ -104,6 +105,7 @@ export function ProductModal({ isOpen, onClose, onSaved, product }: ProductModal
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          merchant_id: merchantId,
           name,
           description,
           category,
@@ -115,7 +117,7 @@ export function ProductModal({ isOpen, onClose, onSaved, product }: ProductModal
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save product');
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to save product');
 
       onSaved();
       onClose();
@@ -125,6 +127,7 @@ export function ProductModal({ isOpen, onClose, onSaved, product }: ProductModal
       setSaving(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">

@@ -8,22 +8,36 @@ export async function POST(request: NextRequest) {
   const start = Date.now();
   try {
     const body = await request.json();
-    const { name = '', description = '' } = body;
+    const { name = '', description = '', merchant_id } = body;
+
+    if (!merchant_id) {
+      return NextResponse.json(
+        {
+          error: 'MISSING_MERCHANT_ID',
+          message: 'merchant_id is required for AI tagging.',
+          hint: 'Include merchant_id in the request body.',
+        },
+        { status: 400 }
+      );
+    }
 
     if (!name || name.trim() === '') {
       return NextResponse.json(
-        { error: 'Product name is required for AI categorization and tag extraction' },
+        { error: 'MISSING_FIELDS', message: 'Product name is required for AI categorization and tag extraction' },
         { status: 400 }
       );
     }
 
     const pool = getDbPool();
 
-    // 1. Fetch merchant's existing tag vocabulary (§8.5)
-    const vocabRes = await pool.query('SELECT DISTINCT unnest(tags) as tag FROM products WHERE tags IS NOT NULL;');
+    // Fetch this merchant's existing tag vocabulary only
+    const vocabRes = await pool.query(
+      'SELECT DISTINCT unnest(tags) as tag FROM products WHERE merchant_id = $1 AND tags IS NOT NULL;',
+      [merchant_id]
+    );
     const existingTags: string[] = vocabRes.rows.map((r) => r.tag).filter(Boolean);
 
-    // 2. Determine Category & Tags using semantic keyword analysis matching existing vocabulary
+    // Determine Category & Tags using semantic keyword analysis
     const text = `${name} ${description}`.toLowerCase();
 
     let category = 'general';
@@ -37,17 +51,13 @@ export async function POST(request: NextRequest) {
       category = 'smart_home';
     }
 
-    // Match tags from existing vocabulary
     const suggestedTags: Set<string> = new Set();
-
-    // Prioritize existing vocabulary words if they appear in text
     for (const tag of existingTags) {
       if (text.includes(tag.toLowerCase())) {
         suggestedTags.add(tag);
       }
     }
 
-    // Add category-based keyword tags if set is small
     const keywordMap: Record<string, string[]> = {
       anc: ['anc', 'noise-cancelling'],
       wireless: ['wireless', 'bluetooth'],
@@ -65,17 +75,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (suggestedTags.size === 0) {
-      suggestedTags.add(category);
-    }
+    if (suggestedTags.size === 0) suggestedTags.add(category);
 
     const tagArray = Array.from(suggestedTags).slice(0, 6);
 
-    // 3. Log to audit_log (§8.5)
     await pool.query(
-      `INSERT INTO audit_log (correlation_id, tool_name, input, decision, reason_code, output, duration_ms, created_at)
-       VALUES ($1, 'ai_tagger', $2, 'suggested', 'AI_TAGGING_COMPLETED', $3, $4, NOW());`,
+      `INSERT INTO audit_log (merchant_id, correlation_id, tool_name, input, decision, reason_code, output, duration_ms, created_at)
+       VALUES ($1, $2, 'ai_tagger', $3, 'suggested', 'AI_TAGGING_COMPLETED', $4, $5, NOW());`,
       [
+        merchant_id,
         randomUUID(),
         JSON.stringify({ name, description }),
         JSON.stringify({ category, suggested_tags: tagArray }),
@@ -92,7 +100,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('API /api/tagger error:', error);
     return NextResponse.json(
-      { error: error.message || 'Tagging engine encountered a database or parsing failure' },
+      { error: error.message || 'Tagging engine failure' },
       { status: 500 }
     );
   }

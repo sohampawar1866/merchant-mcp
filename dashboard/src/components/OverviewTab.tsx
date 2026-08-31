@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 interface OverviewProps {
+  merchantId?: string;
   metrics: any;
   error?: string;
   loading: boolean;

@@ -1,119 +1,65 @@
-# AgenticCheckout MCP Gateway and Control Plane
+# AgenticCheckout Multi-Tenant MCP Gateway & Platform Control Plane
 
-> **Turn any merchant into an AI-accessible, Razorpay-powered store.**  
+> **Turn any merchant into an AI-accessible, Razorpay-powered storefront on a unified multi-tenant platform.**  
 > Built for the **Razorpay AI Buildathon 2026** (Track 1: AI Growth & Agentic Commerce).
 
 [![Release](https://img.shields.io/github/v/release/sohampawar1866/merchant-mcp?color=0284c7&label=Release)](https://github.com/sohampawar1866/merchant-mcp/releases/latest)
-[![GitHub Packages](https://img.shields.io/badge/Docker%20Packages-GHCR-24292e?logo=github)](https://github.com/sohampawar1866/merchant-mcp/pkgs/container/merchant-mcp-server)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![MCP Protocol](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org)
-[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis)](https://redis.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20pgcrypto-336791?logo=postgresql)](https://www.postgresql.org)
 [![Razorpay](https://img.shields.io/badge/Razorpay-Live%20Test%20Mode-0284c7)](https://razorpay.com)
-[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)](https://github.com/sohampawar1866/merchant-mcp/actions)
 
 ---
 
-## Quickstart
+## Architecture at a Glance
 
-You can run AgenticCheckout via **Native Desktop App (Wails)**, **Pre-built GitHub Container Packages**, **Docker Compose**, or **Local Source Code**.
+AgenticCheckout operates as a **Multi-Tenant Gateway & Operator Control Plane**:
+1. **Platform Operator** deploys the backend infrastructure once (`docker compose up -d`).
+2. **Merchants** self-onboard in seconds via `http://localhost:3000/onboard` — entering their Razorpay test keys once into the PostgreSQL Cryptographic Vault (`pgcrypto`) and receiving a 1-time `api_key`. No `.env` files are ever touched by merchants.
+3. **AI Buyer Agents** (Claude, Cursor, ChatGPT, custom agents) connect to the MCP Gateway over `streamablehttp`, `sse`, or `stdio` with their merchant's API key.
+4. **Platform Kill Switch**: The platform admin (`http://localhost:3001`) can instantly suspend any store with a single click, immediately blocking all incoming agent tool calls with `MERCHANT_SUSPENDED`.
 
-### Option 0: Native Desktop App (Fastest & Simplest GUI)
-
-Download the self-contained native desktop app from [**GitHub Releases v1.0.0**](https://github.com/sohampawar1866/merchant-mcp/releases/latest):
-- **macOS Disk Image**: [**Download `AgenticCheckout-macOS-arm64.dmg` (3.9 MB)**](https://github.com/sohampawar1866/merchant-mcp/releases/download/v1.0.0/AgenticCheckout-macOS-arm64.dmg)
-- **macOS App Archive**: [**Download `AgenticCheckout-macOS-arm64.zip` (3.5 MB)**](https://github.com/sohampawar1866/merchant-mcp/releases/download/v1.0.0/AgenticCheckout-macOS-arm64.zip)
-
-**Desktop App Features:**
-- Automatically detects if Docker Desktop is installed and running (with one-click launch / install helper)
-- Setup wizard to enter Razorpay credentials with password masking and validation
-- Configures MCP Transport (`streamablehttp`, `sse`, `stdio`) and ports
-- Atomically generates `.env` and orchestrates Docker containers with real-time log streaming
-
-```bash
-# Or launch locally from repository
-open installer/build/bin/AgenticCheckout.app
 ```
-
----
-
-### Option 1: Run Pre-built Packages from GitHub Container Registry
-
-Pull the official pre-built production container images directly without compiling from source:
-
-```bash
-# Pull official gateway server and merchant dashboard images
-docker pull ghcr.io/sohampawar1866/merchant-mcp-server:latest
-docker pull ghcr.io/sohampawar1866/merchant-mcp-dashboard:latest
-```
-
-Launch all services using the pre-built packages (defaults to `streamablehttp` transport):
-```bash
-docker compose up -d
-```
-- **Merchant Dashboard**: `http://localhost:3000`
-- **MCP Gateway Endpoint**: `http://localhost:8080/mcp` (StreamableHTTP, default)
-
-Override transport at run time without changing any code:
-```bash
-MCP_TRANSPORT=sse docker compose up -d      # SSE transport
-MCP_TRANSPORT=stdio docker compose up -d    # stdio (Claude Desktop)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      AGENTICCHECKOUT MULTI-TENANT PORTS                     │
+├────────────────────────────┬───────────────┬────────────────────────────────┤
+│ Service                    │ Port          │ Description                    │
+├────────────────────────────┼───────────────┼────────────────────────────────┤
+│ Platform Admin Console     │ :3001         │ Cross-store GMV & Kill Switch  │
+│ Merchant Control Plane     │ :3000         │ Store Catalog, Orders, Audit   │
+│ MCP Gateway Endpoint       │ :8080/mcp     │ StreamableHTTP JSON-RPC        │
+│ Razorpay Webhook Listener  │ :8080/webhook │ HMAC SHA-256 Webhook Receiver  │
+└────────────────────────────┴───────────────┴────────────────────────────────┘
 ```
 
 ---
 
-### Option 2: Download the Official Release
+## Quickstart for Platform Operators
 
-Download the validated production release archive from [**GitHub Releases v1.0.0**](https://github.com/sohampawar1866/merchant-mcp/releases/latest):
+### 1. Launch Platform with Docker Compose
+
 ```bash
-# Clone the latest release tag
-git clone --branch v1.0.0 https://github.com/sohampawar1866/merchant-mcp.git
+git clone https://github.com/sohampawar1866/merchant-mcp.git
 cd merchant-mcp
 docker compose up -d
 ```
 
----
-
-### Option 3: Local Go and Dashboard Development
-
-1. Ensure Go 1.24+, Node 20+, and PostgreSQL are installed.
-2. Configure `.env.local` or `.env` with your Razorpay test credentials:
-   ```bash
-   RAZORPAY_KEY_ID=rzp_test_...
-   RAZORPAY_KEY_SECRET=...
-   RAZORPAY_WEBHOOK_SECRET=agentic_checkout_secret_2026
-   ```
-3. Start the Go MCP server (defaults to `streamablehttp` on `:8080`):
-   ```bash
-   go run ./server/cmd/
-   ```
-   Override transport via `--transport` flag (takes highest precedence):
-   ```bash
-   go run ./server/cmd/ --transport=streamablehttp   # default
-   go run ./server/cmd/ --transport=sse
-   go run ./server/cmd/ --transport=stdio            # for Claude Desktop
-   go run ./server/cmd/ --transport=sse --port=9090  # custom port
-   ```
-4. Start the Next.js Dashboard in another terminal:
-   ```bash
-   cd dashboard && npm run dev
-   ```
+- **Platform Admin Console**: `http://localhost:3001`
+- **Merchant Control Plane**: `http://localhost:3000`
+- **Merchant Onboarding**: `http://localhost:3000/onboard`
+- **MCP Gateway Endpoint**: `http://localhost:8080/mcp` (StreamableHTTP)
 
 ---
 
-## Overview
+## For Merchants: Self-Serve Onboarding (Zero `.env` Setup)
 
-As autonomous AI agents (ChatGPT, Claude, Gemini, custom buyer agents) increasingly discover and purchase products on behalf of consumers, merchants require a secure, standard gateway to expose their catalog, accept negotiated purchase offers, and finalize checkout without leaking profit margins or enabling financial hallucinations.
-
-**AgenticCheckout** is a high-performance Model Context Protocol (MCP) server written in Go with a Next.js Merchant Control Plane that acts as the merchant's programmatic front door:
-
-1. **Deterministic Pricing Engine ("LLM never decides money")**: Pure integer arithmetic rules engine evaluates discount proposals against product floor prices with an escalating 3-stage concession ladder.
-2. **Zero Margin Leakage Guarantee**: Strict separation of public DTOs guarantees internal `floor_price` and ladder states are NEVER exposed in tool responses.
-3. **Live Razorpay Payments and Idempotency**: Strictly executes against Razorpay REST APIs (`POST /v1/payment_links`, `POST /v1/orders`) with Redis-backed idempotency guards preventing duplicate charges. No synthetic fallbacks.
-4. **HMAC-Verified Webhooks**: Constant-time HMAC-SHA256 signature verification updates order statuses to `paid` upon bank confirmation.
-5. **Append-Only Audit Trail**: Every tool call, negotiation proposal, checkout, and webhook event is recorded in PostgreSQL with UUID correlation IDs and timing metrics.
-6. **Merchant Dashboard (Blade Design System)**: Full Next.js 14 web UI with real-time KPI aggregations, searchable audit log inspector, transaction history, catalog CRUD, and AI-assisted tagger with vocabulary reuse.
+1. Open `http://localhost:3000/onboard`.
+2. Enter your Store Name, Razorpay Key ID, and Razorpay Key Secret.
+3. Click **"Generate Store API Key & Launch"**.
+4. Save your 1-time API key (e.g. `mc_live_...`). Your keys are encrypted at rest in PostgreSQL and never written to disk.
+5. Provide this key to your autonomous buyer agents via the `merchant_api_key` tool argument or `X-Merchant-Key` header.
 
 ---
 
@@ -121,128 +67,45 @@ As autonomous AI agents (ChatGPT, Claude, Gemini, custom buyer agents) increasin
 
 | Tool Name | Type | Description |
 |-----------|------|-------------|
-| `find_and_price` | Composite | Resolves natural language intent (e.g. *"earbuds under 2000 with ANC"*), extracts budget in paise, filters catalog, and returns ranked options with explainable match reasons in a single call. |
-| `search_catalog` | Core Discovery | PostgreSQL full-text search across product name, description, tags, and category with optional price ceilings. |
-| `get_product_details` | Core Discovery | Retrieves detailed product attributes, specifications, and real-time inventory count. |
-| `negotiate_offer` | Gated Action | Evaluates buyer agent discount proposals against merchant floor prices using a 3-stage concession ladder (33%, 66%, 100% floor) with hard attempt lockout (`MAX_ATTEMPTS_EXCEEDED`). |
-| `create_checkout` | Gated Action | Verifies price gating (agreed price >= floor price), checks Redis idempotency, creates Razorpay Payment Link, and persists order. |
-| `check_order_status` | Status Inquiry | Queries database and polls Razorpay API for live payment capture status. |
+| `find_and_price` | Composite | Resolves natural language intent (e.g. *"earbuds under 2000 with ANC"*), extracts budget in paise, filters catalog for authenticated store, and returns explainable match reasons. |
+| `search_catalog` | Discovery | Scoped PostgreSQL full-text search across product name, description, tags, and category. |
+| `get_product_details` | Discovery | Retrieves detailed product attributes, specifications, and real-time inventory count. |
+| `negotiate_offer` | Gated Action | Evaluates buyer agent discount proposals against merchant floor prices using a 3-stage concession ladder (33%, 66%, 100% floor) with hard attempt lockout. |
+| `create_checkout` | Gated Action | Verifies price gating (agreed price >= floor price), checks Redis 24h idempotency, decrypts merchant Razorpay credentials, and creates live Razorpay Payment Link. |
+| `check_order_status` | Inquiry | Queries database and polls Razorpay API for live payment capture status. |
 
 ---
 
-## Architecture
+## Security and Safety Properties
 
-```mermaid
-flowchart LR
-    subgraph Buyer ["Autonomous Buyer Agent"]
-        LLM["AI Agent\n(Claude / Cursor / ChatGPT)"]
-    end
-
-    subgraph Gateway ["Merchant MCP Gateway (Go :8080)"]
-        MCP["MCP Server\n(mark3labs/mcp-go)"]
-        Composite["find_and_price"]
-        Catalog["search_catalog\nget_product_details"]
-        Pricing["Pricing Engine\n(Deterministic Rules)"]
-        Checkout["create_checkout\ncheck_order_status"]
-        Audit["Audit Logger\n(Correlation IDs)"]
-    end
-
-    subgraph Dashboard ["Merchant Dashboard (Next.js :3000)"]
-        UI["Blade Control Plane\n(Overview, Audit, Orders, Catalog)"]
-        Tagger["AI Tagger and Import"]
-    end
-
-    subgraph Storage ["Infrastructure"]
-        PG[("PostgreSQL 16\nCatalog + Orders + Audit")]
-        RD[("Redis 7\nIdempotency + Rate Limiter")]
-    end
-
-    subgraph Razorpay ["Razorpay Ecosystem"]
-        RZP_API["Razorpay REST API\n(Orders & Payment Links)"]
-        Webhook["Razorpay Webhook\n(HMAC-SHA256)"]
-    end
-
-    LLM <-->|StreamableHTTP / SSE / stdio| MCP
-    MCP --> Composite
-    MCP --> Catalog
-    MCP --> Pricing
-    MCP --> Checkout
-    Composite --> PG
-    Catalog --> PG
-    Pricing --> PG
-    Checkout --> PG
-    Checkout --> RD
-    Checkout --> RZP_API
-    Webhook -->|POST /webhook/razorpay| Gateway
-    Gateway --> Audit --> PG
-    UI --> PG
-    Tagger --> PG
-```
+- **Integer Arithmetic in Paise**: All prices are stored and computed in integer paise (₹1 = 100 paise), eliminating floating-point rounding errors.
+- **Zero Margin Leakage Guarantee**: DB entity `Product` stores `floor_price`, but all tool outputs serialize through `PublicProduct` and `MatchOption` DTOs where internal margin fields are structurally omitted.
+- **Cryptographic Vault at Rest**: Merchant secrets are symmetrically encrypted using PostgreSQL `pgcrypto` (`pgp_sym_encrypt`) with `ENCRYPTION_PASSPHRASE`.
+- **Platform Kill Switch**: If a merchant's status is toggled to `suspended` in the Admin Console, all tool calls immediately return `MERCHANT_SUSPENDED`.
+- **Constant-Time HMAC Webhooks**: Webhook signatures are verified with `crypto/subtle.ConstantTimeCompare` against the merchant's decrypted secret to eliminate timing side-channel attacks.
 
 ---
 
-## Testing and Verification
+## Automated Testing & Verification
 
-Run the full automated test suite (including live Razorpay sandbox integration, deliberate below-floor failure cases, idempotency verification, HMAC webhooks, and 8-step E2E commerce journey):
+Run the full automated test suite (including Multi-Tenant Isolation, Platform Kill Switch, Deliberate Below-Floor Rejections, and 8-Step E2E Commerce Journey):
 
 ```bash
 go test ./... -v
 ```
 
-Run only the 8-step End-to-End Agent Commerce Journey:
+Run only multi-tenant isolation and kill switch tests:
+```bash
+go test ./server/tools/ -run TestMultiTenant -v
+```
+
+Run the 8-step End-to-End Agent Commerce Journey:
 ```bash
 go test ./server/tools/ -run TestE2E -v
 ```
 
 ---
 
-## Environment Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Server HTTP port (also overridable via `--port` flag) |
-| `MCP_TRANSPORT` | `streamablehttp` | Transport: `streamablehttp` \| `sse` \| `stdio` (also overridable via `--transport` flag) |
-| `DATABASE_URL` | `postgres://agentic:agentic@localhost:5432/agentic_checkout?sslmode=disable` | PostgreSQL connection URI |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection URI |
-| `RAZORPAY_KEY_ID` | `""` | Razorpay Key ID |
-| `RAZORPAY_KEY_SECRET` | `""` | Razorpay Key Secret |
-| `RAZORPAY_WEBHOOK_SECRET` | `""` | Webhook HMAC secret |
-| `ENABLE_FIND_AND_PRICE` | `true` | Enable `find_and_price` composite tool |
-| `ENABLE_NEGOTIATION` | `true` | Enable `negotiate_offer` tool |
-| `ENABLE_HUMAN_APPROVAL` | `false` | Require merchant approval on negotiation |
-| `MAX_NEGOTIATION_ATTEMPTS` | `3` | Maximum negotiation rounds per product session |
-| `MAX_TOOL_CALLS_PER_MINUTE` | `30` | Session rate limiting threshold |
-| `WEBHOOK_STRICT_MODE` | `true` | Reject invalid webhook HMAC signatures with HTTP 400 |
-### Dynamic Store Policies & Live Feature Flags
-
-Unlike static environment variables that require restarting Docker containers, AgenticCheckout features a **Dynamic Store Settings Engine** backed by the `store_settings` PostgreSQL table:
-
-- **Live Dashboard Control**: Click **"Store Policies"** in the top navigation bar of the Merchant Dashboard (`http://localhost:3000`) to toggle features and guardrails instantly.
-- **Immediate Propagation**: Changes take effect on the very next tool call without restarting Go or Docker containers.
-- **Configurable Policies**:
-  - `enable_find_and_price`: Enable/disable natural-language intent search & budget matching.
-  - `enable_negotiation`: Enable/disable autonomous bargaining and concession ladders.
-  - `enable_human_approval`: Require merchant manual approval for all discount concessions.
-  - `max_negotiation_attempts`: Set bargaining round limits before lockout (1, 2, 3, 5, 10).
-  - `max_tool_calls_per_minute`: Dynamic rate limit threshold per agent session.
-  - `webhook_strict_mode`: Enforce cryptographic HMAC-SHA256 signature verification.
-
----
-
-## Security and Safety Properties
-
-- **Integer Arithmetic in Paise**: All prices are stored and computed in integer paise (₹1 = 100 paise), avoiding floating-point precision flaws.
-- **Zero Margin Leakage**: DB entity `Product` contains `floor_price`, but MCP tool outputs serialize through `PublicProduct` and `MatchOption` DTOs where internal margin fields are structurally omitted.
-- **Gated Checkout**: Attempting to execute `create_checkout` below merchant floor price is strictly rejected with `BELOW_FLOOR`.
-- **Constant-Time Cryptography**: Webhook HMAC signatures are verified with `crypto/subtle.ConstantTimeCompare` to mitigate timing attacks.
-- **Zero Synthetic Fallbacks**: Live production-grade REST calls to Razorpay sandbox with explicit, actionable UI diagnostics.
-
----
-
-## Documentation Links
-- [Comprehensive Architecture Specification (ARCHITECTURE.md)](ARCHITECTURE.md)
-
----
-
 ## License
+
 MIT License. Built for the Razorpay AI Buildathon 2026.

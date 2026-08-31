@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   LayoutDashboard,
   Activity,
@@ -9,6 +10,9 @@ import {
   RefreshCw,
   Zap,
   Sliders,
+  Store,
+  ArrowRight,
+  AlertCircle,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/OverviewTab';
 import { AuditTrailTab } from '@/components/AuditTrailTab';
@@ -16,24 +20,119 @@ import { TransactionsTab } from '@/components/TransactionsTab';
 import { CatalogTab } from '@/components/CatalogTab';
 import { SettingsModal } from '@/components/SettingsModal';
 
-export default function DashboardPage() {
+// ─────────────────────────────────────────────────────────────────────────────
+// No-Merchant Error Screen
+// ─────────────────────────────────────────────────────────────────────────────
+function NoMerchantScreen() {
+  return (
+    <div className="min-h-screen bg-figma-canvas flex flex-col items-center justify-center p-6 text-figma-ink">
+      <div className="max-w-md w-full text-center space-y-6">
+        {/* Icon */}
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+
+        {/* Heading */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-figma-ink">No Store Selected</h1>
+          <p className="text-sm text-zinc-500 mt-2">
+            This control plane requires a <strong>Merchant ID</strong> to load your store's data.
+            You have not passed a <code className="font-mono text-xs bg-zinc-100 px-1.5 py-0.5 rounded">merchant_id</code> in the URL.
+          </p>
+        </div>
+
+        {/* Error detail card */}
+        <div className="text-left p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-800 font-mono space-y-1">
+          <div className="font-bold uppercase tracking-wider text-xs text-amber-600 mb-2">How to fix</div>
+          <div>1. Register a new store at <strong>/onboard</strong></div>
+          <div>2. Copy the Merchant ID you receive</div>
+          <div>3. Access the dashboard as:</div>
+          <div className="mt-1 px-2 py-1.5 bg-white border border-amber-200 rounded-lg text-xs break-all">
+            /?merchant_id=<span className="text-amber-700">your-id-here</span>
+          </div>
+        </div>
+
+        {/* Action */}
+        <a
+          href="/onboard"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-figma-primary text-white font-medium text-sm hover:bg-zinc-800 transition shadow-sm"
+        >
+          <Store className="w-4 h-4" />
+          Register Your Store
+          <ArrowRight className="w-4 h-4" />
+        </a>
+
+        <p className="text-xs text-zinc-400 font-mono">
+          Already have an ID? Add <code>?merchant_id=...</code> to the URL above.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Merchant Not Found Error Screen
+// ─────────────────────────────────────────────────────────────────────────────
+function MerchantNotFoundScreen({ merchantId }: { merchantId: string }) {
+  return (
+    <div className="min-h-screen bg-figma-canvas flex flex-col items-center justify-center p-6 text-figma-ink">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-figma-ink">Store Not Found</h1>
+          <p className="text-sm text-zinc-500 mt-2">
+            No merchant with ID <code className="font-mono text-xs bg-zinc-100 px-1.5 py-0.5 rounded">{merchantId}</code> exists on this platform.
+          </p>
+        </div>
+        <div className="text-left p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-800 font-mono">
+          <div className="font-bold uppercase tracking-wider text-xs text-red-600 mb-2">Possible Causes</div>
+          <div>• The ID was copied incorrectly</div>
+          <div>• The merchant was deleted from the platform</div>
+          <div>• The wrong database is connected</div>
+        </div>
+        <a
+          href="/onboard"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-figma-primary text-white font-medium text-sm hover:bg-zinc-800 transition"
+        >
+          <Store className="w-4 h-4" />
+          Register a New Store
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Dashboard Content
+// ─────────────────────────────────────────────────────────────────────────────
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const merchantId = searchParams.get('merchant_id');
+
   const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'transactions' | 'catalog'>('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
   const [metricsError, setMetricsError] = useState('');
+  const [merchantNotFound, setMerchantNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchMetrics = async () => {
+    if (!merchantId) return;
     try {
-      const res = await fetch('/api/metrics');
+      const res = await fetch(`/api/metrics?merchant_id=${merchantId}`);
       const data = await res.json();
+      if (res.status === 404) {
+        setMerchantNotFound(true);
+        return;
+      }
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch gateway metrics');
+        throw new Error(data.error || data.message || 'Failed to fetch gateway metrics');
       }
       setMetrics(data);
       setMetricsError('');
     } catch (e: any) {
-      console.error('Failed to load metrics:', e);
       setMetricsError(e.message || 'Database connection error');
     } finally {
       setLoading(false);
@@ -41,10 +140,20 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    if (!merchantId) {
+      setLoading(false);
+      return;
+    }
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 10000); // 10s auto-refresh
+    const interval = setInterval(fetchMetrics, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [merchantId]);
+
+  // ── Gate: no merchant_id in URL ──────────────────────────────────────────
+  if (!merchantId) return <NoMerchantScreen />;
+
+  // ── Gate: merchant not found ─────────────────────────────────────────────
+  if (merchantNotFound) return <MerchantNotFoundScreen merchantId={merchantId} />;
 
   const navItems = [
     { id: 'overview', label: 'Store Overview', shortLabel: 'Overview', icon: LayoutDashboard },
@@ -52,6 +161,8 @@ export default function DashboardPage() {
     { id: 'transactions', label: 'Orders & Payments', shortLabel: 'Orders', icon: CreditCard },
     { id: 'catalog', label: 'Catalog & Pricing', shortLabel: 'Catalog', icon: Package },
   ];
+
+  const merchantName = metrics?.merchant?.name || '';
 
   return (
     <div className="min-h-screen flex flex-col bg-figma-canvas text-figma-ink pb-16 lg:pb-0">
@@ -66,6 +177,9 @@ export default function DashboardPage() {
             <div>
               <h1 className="font-sans text-base font-semibold text-figma-ink tracking-tight">
                 AgenticCheckout
+                {merchantName && (
+                  <span className="text-zinc-400 font-normal"> / {merchantName}</span>
+                )}
               </h1>
             </div>
           </div>
@@ -141,9 +255,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   <Icon className="w-4 h-4 mb-0.5" />
-                  <span className="text-[11px] leading-tight truncate">
-                    {item.shortLabel}
-                  </span>
+                  <span className="text-[11px] leading-tight truncate">{item.shortLabel}</span>
                 </button>
               );
             })}
@@ -155,19 +267,21 @@ export default function DashboardPage() {
       <main className="flex-1 p-3 sm:p-5 md:p-6 max-w-7xl w-full mx-auto">
         {activeTab === 'overview' && (
           <OverviewTab
+            merchantId={merchantId}
             metrics={metrics}
             error={metricsError}
             loading={!metrics && !metricsError}
             onNavigate={(tab) => setActiveTab(tab as any)}
           />
         )}
-        {activeTab === 'audit' && <AuditTrailTab />}
-        {activeTab === 'transactions' && <TransactionsTab />}
-        {activeTab === 'catalog' && <CatalogTab />}
+        {activeTab === 'audit' && <AuditTrailTab merchantId={merchantId} />}
+        {activeTab === 'transactions' && <TransactionsTab merchantId={merchantId} />}
+        {activeTab === 'catalog' && <CatalogTab merchantId={merchantId} />}
       </main>
 
       {/* Live Store Guardrails & Settings Modal */}
       <SettingsModal
+        merchantId={merchantId}
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onSettingsChanged={fetchMetrics}
@@ -192,7 +306,20 @@ export default function DashboardPage() {
   );
 }
 
-
-
-
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-figma-canvas flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm font-mono text-zinc-500">
+            <div className="w-4 h-4 border-2 border-zinc-300 border-t-figma-primary rounded-full animate-spin"></div>
+            Loading store control plane...
+          </div>
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
+  );
+}
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ExternalLink, RefreshCw, CheckCircle2, Clock, XCircle, ShoppingBag } from 'lucide-react';
 
-export function TransactionsTab() {
+export function TransactionsTab({ merchantId }: { merchantId: string }) {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -12,10 +12,10 @@ export function TransactionsTab() {
     setLoading(true);
     setErrorMessage('');
     try {
-      const res = await fetch('/api/transactions');
+      const res = await fetch(`/api/transactions?merchant_id=${merchantId}`);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to load orders from database');
+        throw new Error(data.message || data.error || 'Failed to load orders from database');
       }
       setTransactions(data.transactions || []);
     } catch (e: any) {
@@ -28,7 +28,8 @@ export function TransactionsTab() {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [merchantId]);
+
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {

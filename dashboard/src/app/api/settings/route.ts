@@ -1,39 +1,33 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function getMerchantId(request: NextRequest): string | null {
+  const { searchParams } = new URL(request.url);
+  return searchParams.get('merchant_id') || request.headers.get('x-merchant-id') || null;
+}
+
+export async function GET(request: NextRequest) {
+  const merchantId = getMerchantId(request);
+  if (!merchantId) {
+    return NextResponse.json(
+      {
+        error: 'MISSING_MERCHANT_ID',
+        message: 'No merchant_id provided. Pass ?merchant_id= as a query parameter.',
+        hint: 'Visit /onboard to register your store and get an ID.',
+      },
+      { status: 400 }
+    );
+  }
+
   const pool = getDbPool();
 
   try {
-    // Ensure table exists and has defaults
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS store_settings (
-        key VARCHAR(64) PRIMARY KEY,
-        value TEXT NOT NULL,
-        description TEXT,
-        category VARCHAR(32) NOT NULL DEFAULT 'general',
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      INSERT INTO store_settings (key, value, description, category) VALUES
-        ('razorpay_key_id', '', 'Razorpay API Key ID for orders & checkout links', 'credentials'),
-        ('razorpay_key_secret', '', 'Razorpay API Key Secret', 'credentials'),
-        ('razorpay_webhook_secret', 'agentic_checkout_secret_2026', 'HMAC SHA-256 secret for verifying payment webhooks', 'credentials'),
-        ('mcp_transport', 'streamablehttp', 'Active MCP transport protocol (streamablehttp, sse, or stdio)', 'transport'),
-        ('enable_find_and_price', 'true', 'Enable AI natural language product intent search & price matching', 'features'),
-        ('enable_negotiation', 'true', 'Enable autonomous price bargaining and discount concession ladder', 'features'),
-        ('enable_human_approval', 'false', 'Require human merchant manual approval for all discount proposals', 'guardrails'),
-        ('max_negotiation_attempts', '3', 'Maximum bargaining rounds per product session before lockout', 'guardrails'),
-        ('max_tool_calls_per_minute', '30', 'Rate limit threshold per agent session per minute', 'security'),
-        ('enable_catalog_cache', 'true', 'Cache product lookups in Redis for sub-millisecond responses', 'performance'),
-        ('audit_log_level', 'full', 'Audit log detail level (full or decisions_only)', 'telemetry'),
-        ('webhook_strict_mode', 'true', 'Enforce strict cryptographic HMAC-SHA256 signature verification', 'security')
-      ON CONFLICT (key) DO NOTHING;
-    `);
-
-    const res = await pool.query(`SELECT key, value, description, category, updated_at FROM store_settings ORDER BY category, key;`);
+    const res = await pool.query(
+      `SELECT key, value, description, category, updated_at FROM store_settings WHERE merchant_id = $1 ORDER BY category, key;`,
+      [merchantId]
+    );
 
     const settingsMap: Record<string, any> = {};
     for (const row of res.rows) {
@@ -45,7 +39,7 @@ export async function GET() {
       };
     }
 
-    return NextResponse.json({ success: true, settings: settingsMap });
+    return NextResponse.json({ success: true, merchant_id: merchantId, settings: settingsMap });
   } catch (error: any) {
     console.error('Failed to get store settings:', error);
     return NextResponse.json(
@@ -60,25 +54,37 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
-    const { key, value } = body;
+    const { key, value, merchant_id } = body;
+
+    if (!merchant_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MISSING_MERCHANT_ID',
+          message: 'merchant_id is required to update store settings.',
+          hint: 'Include merchant_id in the request body.',
+        },
+        { status: 400 }
+      );
+    }
 
     if (!key || value === undefined) {
       return NextResponse.json(
-        { success: false, error: 'Missing key or value parameter' },
+        { success: false, error: 'MISSING_FIELDS', message: 'key and value are required' },
         { status: 400 }
       );
     }
 
     await pool.query(
       `
-      INSERT INTO store_settings (key, value, updated_at)
-      VALUES ($1, $2, NOW())
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+      INSERT INTO store_settings (merchant_id, key, value, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (merchant_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
       `,
-      [key, String(value)]
+      [merchant_id, key, String(value)]
     );
 
-    return NextResponse.json({ success: true, key, value });
+    return NextResponse.json({ success: true, merchant_id, key, value });
   } catch (error: any) {
     console.error('Failed to update store setting:', error);
     return NextResponse.json(

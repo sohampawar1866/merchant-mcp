@@ -9,8 +9,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// DefaultDemoMerchantID is the constant UUID for Demo Store 1
+const DefaultDemoMerchantID = "00000000-0000-0000-0000-000000000001"
+
 // StoreSetting represents a dynamic runtime configuration or feature flag.
 type StoreSetting struct {
+	MerchantID  string    `json:"merchant_id"`
 	Key         string    `json:"key"`
 	Value       string    `json:"value"`
 	Description string    `json:"description"`
@@ -20,43 +24,51 @@ type StoreSetting struct {
 
 var (
 	settingsCacheMu sync.RWMutex
-	settingsCache   = make(map[string]string)
-	cacheExpiry     time.Time
-	cacheTTL        = 3 * time.Second // Short TTL ensures sub-second propagation without hammering DB
+	// merchantID -> (key -> value)
+	merchantSettingsCache = make(map[string]map[string]string)
+	merchantCacheExpiry   = make(map[string]time.Time)
+	cacheTTL              = 3 * time.Second
 )
 
-// GetAllStoreSettings retrieves all settings from DB (cached with 3s TTL).
-func GetAllStoreSettings(ctx context.Context, pool *pgxpool.Pool) (map[string]string, error) {
+// GetAllMerchantStoreSettings retrieves all settings for a specific merchant from DB (cached with 3s TTL).
+func GetAllMerchantStoreSettings(ctx context.Context, pool *pgxpool.Pool, merchantID string) (map[string]string, error) {
 	if pool == nil {
 		return map[string]string{}, nil
 	}
+	if merchantID == "" {
+		merchantID = DefaultDemoMerchantID
+	}
 
 	settingsCacheMu.RLock()
-	if time.Now().Before(cacheExpiry) && len(settingsCache) > 0 {
-		cachedCopy := make(map[string]string, len(settingsCache))
-		for k, v := range settingsCache {
-			cachedCopy[k] = v
+	if exp, ok := merchantCacheExpiry[merchantID]; ok && time.Now().Before(exp) {
+		if cache, ok := merchantSettingsCache[merchantID]; ok && len(cache) > 0 {
+			cachedCopy := make(map[string]string, len(cache))
+			for k, v := range cache {
+				cachedCopy[k] = v
+			}
+			settingsCacheMu.RUnlock()
+			return cachedCopy, nil
 		}
-		settingsCacheMu.RUnlock()
-		return cachedCopy, nil
 	}
 	settingsCacheMu.RUnlock()
 
 	settingsCacheMu.Lock()
 	defer settingsCacheMu.Unlock()
 
-	// Double check
-	if time.Now().Before(cacheExpiry) && len(settingsCache) > 0 {
-		cachedCopy := make(map[string]string, len(settingsCache))
-		for k, v := range settingsCache {
-			cachedCopy[k] = v
+	// Double check inside write lock
+	if exp, ok := merchantCacheExpiry[merchantID]; ok && time.Now().Before(exp) {
+		if cache, ok := merchantSettingsCache[merchantID]; ok && len(cache) > 0 {
+			cachedCopy := make(map[string]string, len(cache))
+			for k, v := range cache {
+				cachedCopy[k] = v
+			}
+			return cachedCopy, nil
 		}
-		return cachedCopy, nil
 	}
 
-	rows, err := pool.Query(ctx, `SELECT key, value FROM store_settings;`)
+	rows, err := pool.Query(ctx, `SELECT key, value FROM store_settings WHERE merchant_id = $1;`, merchantID)
 	if err != nil {
-		return settingsCache, err
+		return map[string]string{}, err
 	}
 	defer rows.Close()
 
@@ -68,19 +80,19 @@ func GetAllStoreSettings(ctx context.Context, pool *pgxpool.Pool) (map[string]st
 		}
 	}
 
-	settingsCache = newMap
-	cacheExpiry = time.Now().Add(cacheTTL)
+	merchantSettingsCache[merchantID] = newMap
+	merchantCacheExpiry[merchantID] = time.Now().Add(cacheTTL)
 
-	cachedCopy := make(map[string]string, len(settingsCache))
-	for k, v := range settingsCache {
+	cachedCopy := make(map[string]string, len(newMap))
+	for k, v := range newMap {
 		cachedCopy[k] = v
 	}
 	return cachedCopy, nil
 }
 
-// GetSettingBool dynamically retrieves a boolean feature flag from store_settings.
-func GetSettingBool(ctx context.Context, pool *pgxpool.Pool, key string, fallback bool) bool {
-	settings, err := GetAllStoreSettings(ctx, pool)
+// GetMerchantSettingBool dynamically retrieves a boolean setting for a merchant.
+func GetMerchantSettingBool(ctx context.Context, pool *pgxpool.Pool, merchantID, key string, fallback bool) bool {
+	settings, err := GetAllMerchantStoreSettings(ctx, pool, merchantID)
 	if err != nil || len(settings) == 0 {
 		return fallback
 	}
@@ -97,9 +109,9 @@ func GetSettingBool(ctx context.Context, pool *pgxpool.Pool, key string, fallbac
 	return parsed
 }
 
-// GetSettingInt dynamically retrieves an integer configuration from store_settings.
-func GetSettingInt(ctx context.Context, pool *pgxpool.Pool, key string, fallback int) int {
-	settings, err := GetAllStoreSettings(ctx, pool)
+// GetMerchantSettingInt dynamically retrieves an integer setting for a merchant.
+func GetMerchantSettingInt(ctx context.Context, pool *pgxpool.Pool, merchantID, key string, fallback int) int {
+	settings, err := GetAllMerchantStoreSettings(ctx, pool, merchantID)
 	if err != nil || len(settings) == 0 {
 		return fallback
 	}
@@ -116,9 +128,9 @@ func GetSettingInt(ctx context.Context, pool *pgxpool.Pool, key string, fallback
 	return parsed
 }
 
-// GetSettingString dynamically retrieves a string configuration from store_settings.
-func GetSettingString(ctx context.Context, pool *pgxpool.Pool, key string, fallback string) string {
-	settings, err := GetAllStoreSettings(ctx, pool)
+// GetMerchantSettingString dynamically retrieves a string setting for a merchant.
+func GetMerchantSettingString(ctx context.Context, pool *pgxpool.Pool, merchantID, key, fallback string) string {
+	settings, err := GetAllMerchantStoreSettings(ctx, pool, merchantID)
 	if err != nil || len(settings) == 0 {
 		return fallback
 	}
@@ -130,23 +142,47 @@ func GetSettingString(ctx context.Context, pool *pgxpool.Pool, key string, fallb
 	return valStr
 }
 
-// UpdateStoreSetting updates a setting key and invalidates the local in-memory cache.
-func UpdateStoreSetting(ctx context.Context, pool *pgxpool.Pool, key, value string) error {
+// UpdateMerchantStoreSetting updates a setting for a merchant and invalidates cache.
+func UpdateMerchantStoreSetting(ctx context.Context, pool *pgxpool.Pool, merchantID, key, value string) error {
 	if pool == nil {
 		return nil
 	}
+	if merchantID == "" {
+		merchantID = DefaultDemoMerchantID
+	}
 
 	_, err := pool.Exec(ctx, `
-		INSERT INTO store_settings (key, value, updated_at)
-		VALUES ($1, $2, NOW())
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
-	`, key, value)
+		INSERT INTO store_settings (merchant_id, key, value, updated_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (merchant_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+	`, merchantID, key, value)
 
 	if err == nil {
 		settingsCacheMu.Lock()
-		cacheExpiry = time.Time{} // Invalidate immediately
+		delete(merchantCacheExpiry, merchantID)
 		settingsCacheMu.Unlock()
 	}
 
 	return err
+}
+
+// Backwards-compatible legacy helpers defaulting to DefaultDemoMerchantID
+func GetAllStoreSettings(ctx context.Context, pool *pgxpool.Pool) (map[string]string, error) {
+	return GetAllMerchantStoreSettings(ctx, pool, DefaultDemoMerchantID)
+}
+
+func GetSettingBool(ctx context.Context, pool *pgxpool.Pool, key string, fallback bool) bool {
+	return GetMerchantSettingBool(ctx, pool, DefaultDemoMerchantID, key, fallback)
+}
+
+func GetSettingInt(ctx context.Context, pool *pgxpool.Pool, key string, fallback int) int {
+	return GetMerchantSettingInt(ctx, pool, DefaultDemoMerchantID, key, fallback)
+}
+
+func GetSettingString(ctx context.Context, pool *pgxpool.Pool, key, fallback string) string {
+	return GetMerchantSettingString(ctx, pool, DefaultDemoMerchantID, key, fallback)
+}
+
+func UpdateStoreSetting(ctx context.Context, pool *pgxpool.Pool, key, value string) error {
+	return UpdateMerchantStoreSetting(ctx, pool, DefaultDemoMerchantID, key, value)
 }

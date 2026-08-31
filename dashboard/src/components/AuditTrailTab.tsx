@@ -17,7 +17,7 @@ import {
   Code2,
 } from 'lucide-react';
 
-export function AuditTrailTab() {
+export function AuditTrailTab({ merchantId }: { merchantId: string }) {
   const [entries, setEntries] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export function AuditTrailTab() {
     setLoading(true);
     setErrorMessage('');
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ merchant_id: merchantId });
       if (search) params.set('search', search);
       if (tool !== 'all') params.set('tool', tool);
       if (decision !== 'all') params.set('decision', decision);
@@ -41,7 +41,7 @@ export function AuditTrailTab() {
       const res = await fetch(`/api/audit?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to retrieve activity log from database');
+        throw new Error(data.message || data.error || 'Failed to retrieve activity log from database');
       }
       setEntries(data.entries || []);
       setTotal(data.total || 0);
@@ -52,6 +52,7 @@ export function AuditTrailTab() {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchAuditLogs();

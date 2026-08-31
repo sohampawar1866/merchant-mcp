@@ -29,6 +29,11 @@ dashboard/node_modules/
 dashboard/.next/
 dashboard/out/
 dashboard/dist/
+admin-dashboard/node_modules/
+admin-dashboard/.next/
+admin-dashboard/out/
+admin-dashboard/dist/
 node_modules/
 # Planning & GSD
 .planning/
+

@@ -38,7 +38,7 @@ func main() {
 	}
 
 	cfg := config.Load()
-	log.Printf("AgenticCheckout MCP Gateway v0.1.0 starting (transport: %s, port: %s)", cfg.MCPTransport, cfg.Port)
+	log.Printf("AgenticCheckout Multi-Tenant MCP Gateway v1.0.0 starting (transport: %s, port: %s)", cfg.MCPTransport, cfg.Port)
 	log.Printf("Configuration: find_and_price=%v, negotiation=%v, human_approval=%v, max_attempts=%d, rate_limit=%d/min, strict_webhook=%v",
 		cfg.EnableFindAndPrice, cfg.EnableNegotiation, cfg.EnableHumanApproval, cfg.MaxNegotiationAttempts, cfg.MaxToolCallsPerMinute, cfg.WebhookStrictMode)
 
@@ -60,7 +60,7 @@ func main() {
 		}
 		log.Println("Database migrations completed")
 
-		// Auto-seed catalog if empty
+		// Auto-seed catalog if empty for Demo Store 1
 		if err := db.AutoSeed(ctx, pool, "data/catalog.seed.json"); err != nil {
 			log.Printf("Warning: auto-seeding failed: %v", err)
 		}
@@ -71,30 +71,30 @@ func main() {
 	auditLogger := audit.NewLogger(pool, cfg.AuditLogLevel)
 	rzpClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
 	redisCache, _ := cache.NewCache(cfg.RedisURL)
-	webhookReceiver := webhook.NewReceiver(pool, auditLogger, cfg.RazorpayWebhookSecret, cfg.WebhookStrictMode)
+	webhookReceiver := webhook.NewReceiver(pool, auditLogger, cfg.RazorpayWebhookSecret, cfg.WebhookStrictMode, cfg.EncryptionPassphrase)
 
 	// Initialize MCP Server
 	s := server.NewMCPServer(
 		"agentic-checkout-gateway",
-		"0.1.0",
+		"1.0.0",
 		server.WithToolCapabilities(true),
 		server.WithLogging(),
 	)
 
-	// Register Core Catalog Tools
-	tools.RegisterCatalogTools(s, pool, auditLogger)
+	// Register Core Catalog Tools (scoped per merchant)
+	tools.RegisterCatalogTools(s, pool, auditLogger, cfg)
 
-	// Register Composite Tools (dynamically controlled via store_settings)
+	// Register Composite Tools (dynamically controlled per merchant)
 	tools.RegisterCompositeTools(s, pool, auditLogger, cfg)
-	log.Println("Feature: find_and_price composite tool registered (dynamic policy enabled)")
+	log.Println("Feature: find_and_price composite tool registered (multi-tenant enabled)")
 
-	// Register Negotiation Tool (dynamically controlled via store_settings)
+	// Register Negotiation Tool (dynamically controlled per merchant)
 	tools.RegisterNegotiateTool(s, pool, auditLogger, cfg)
-	log.Println("Feature: negotiate_offer tool registered (dynamic policy enabled)")
+	log.Println("Feature: negotiate_offer tool registered (multi-tenant enabled)")
 
-	// Register Checkout Tools
+	// Register Checkout Tools (gated with decrypted credentials & kill switch)
 	tools.RegisterCheckoutTools(s, pool, rzpClient, redisCache, auditLogger, cfg)
-	log.Println("Feature: create_checkout & check_order_status tools registered")
+	log.Println("Feature: create_checkout & check_order_status tools registered (multi-tenant enabled)")
 
 	// In stdio mode, launch a lightweight background HTTP server on cfg.Port for Razorpay webhooks
 	if cfg.MCPTransport == "stdio" {

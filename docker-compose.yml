@@ -38,6 +38,7 @@ services:
       DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
       REDIS_URL: redis://redis:6379
       PORT: "${PORT:-8080}"
+      ENCRYPTION_PASSPHRASE: "${ENCRYPTION_PASSPHRASE:-agentic_platform_master_passphrase_2026}"
       # Transport: streamablehttp (default) | sse | stdio
       # Override at run time: MCP_TRANSPORT=sse docker compose up -d
       MCP_TRANSPORT: "${MCP_TRANSPORT:-streamablehttp}"
@@ -63,9 +64,25 @@ services:
     container_name: merchant-mcp-dashboard
     environment:
       DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
+      ENCRYPTION_PASSPHRASE: "${ENCRYPTION_PASSPHRASE:-agentic_platform_master_passphrase_2026}"
       PORT: "3000"
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    container_name: merchant-mcp-admin-dashboard
+    environment:
+      DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
+      ENCRYPTION_PASSPHRASE: "${ENCRYPTION_PASSPHRASE:-agentic_platform_master_passphrase_2026}"
+      PORT: "3001"
+    ports:
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy

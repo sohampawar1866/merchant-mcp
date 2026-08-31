@@ -3,7 +3,24 @@ import { getDbPool } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+function getMerchantId(request: NextRequest): string | null {
+  const { searchParams } = new URL(request.url);
+  return searchParams.get('merchant_id') || request.headers.get('x-merchant-id') || null;
+}
+
 export async function GET(request: NextRequest) {
+  const merchantId = getMerchantId(request);
+  if (!merchantId) {
+    return NextResponse.json(
+      {
+        error: 'MISSING_MERCHANT_ID',
+        message: 'No merchant_id provided. Pass ?merchant_id= as a query parameter or set the X-Merchant-Id header.',
+        hint: 'Visit /onboard to register your store and get an ID.',
+      },
+      { status: 400 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
@@ -14,8 +31,8 @@ export async function GET(request: NextRequest) {
 
     const pool = getDbPool();
 
-    const conditions: string[] = ['1=1'];
-    const values: any[] = [];
+    const conditions: string[] = ['merchant_id = $1'];
+    const values: any[] = [merchantId];
 
     if (search) {
       values.push(`%${search}%`);
@@ -61,6 +78,7 @@ export async function GET(request: NextRequest) {
     const dataRes = await pool.query(dataQuery, values);
 
     return NextResponse.json({
+      merchant_id: merchantId,
       entries: dataRes.rows,
       total,
       limit,

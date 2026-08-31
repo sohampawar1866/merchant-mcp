@@ -25,6 +25,9 @@ type Config struct {
 	Port         string
 	MCPTransport string // "stdio", "sse", "streamablehttp"
 
+	// Security & Vault
+	EncryptionPassphrase string
+
 	// Feature Flags
 	EnableFindAndPrice     bool
 	EnableNegotiation      bool
@@ -99,6 +102,9 @@ func Load() *Config {
 		// Server
 		Port:         envStr("PORT", "8080"),
 		MCPTransport: envStr("MCP_TRANSPORT", "streamablehttp"), // default: streamablehttp (use --transport flag or MCP_TRANSPORT env to override)
+
+		// Vault Encryption
+		EncryptionPassphrase: envStr("ENCRYPTION_PASSPHRASE", "agentic_platform_master_passphrase_2026"),
 
 		// Feature Flags
 		EnableFindAndPrice:     envBool("ENABLE_FIND_AND_PRICE", true),

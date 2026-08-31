@@ -9,12 +9,9 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/config"
 	"github.com/sohampawar1866/merchant-mcp/server/db"
 )
-
-func getTestPool(t *testing.T) (*db.SeedProduct, *audit.Logger, func()) {
-	return nil, nil, nil
-}
 
 func TestSearchCatalog_ZeroLeakageAndResults(t *testing.T) {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -33,16 +30,18 @@ func TestSearchCatalog_ZeroLeakageAndResults(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	handler := handleSearchCatalog(pool, auditLogger)
+	handler := handleSearchCatalog(pool, auditLogger, cfg)
 
 	// Test 1: Search query for earbuds
 	req := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name: "search_catalog",
 			Arguments: map[string]any{
-				"query": "earbuds",
-				"limit": 5,
+				"merchant_api_key": "demo-key-1",
+				"query":            "earbuds",
+				"limit":            5,
 			},
 		},
 	}
@@ -61,24 +60,46 @@ func TestSearchCatalog_ZeroLeakageAndResults(t *testing.T) {
 	if strings.Contains(textContent, "floor_price") {
 		t.Fatalf("CRITICAL SECURITY VIOLATION: search_catalog output leaks 'floor_price'!\nPayload: %s", textContent)
 	}
-	if strings.Contains(textContent, "tags_source") {
-		t.Fatalf("Internal field 'tags_source' should not be exposed in search_catalog output")
+	if strings.Contains(textContent, "margin") {
+		t.Fatalf("CRITICAL SECURITY VIOLATION: search_catalog output leaks 'margin'!\nPayload: %s", textContent)
 	}
 
-	// Verify structured output
+	// ZERO-LEAKAGE ASSERTION 2: Structural JSON Unmarshal verification
+	var rawMaps []map[string]any
 	var searchResp SearchCatalogResponse
 	if err := json.Unmarshal([]byte(textContent), &searchResp); err != nil {
-		t.Fatalf("failed to unmarshal search response: %v", err)
+		t.Fatalf("failed to unmarshal SearchCatalogResponse: %v", err)
+	}
+
+	// Also unmarshal into arbitrary map to ensure the field wasn't just ignored by Go's struct unmarshaler
+	var fullResponseMap map[string]any
+	_ = json.Unmarshal([]byte(textContent), &fullResponseMap)
+	if results, ok := fullResponseMap["results"].([]any); ok {
+		for _, item := range results {
+			if itemMap, ok := item.(map[string]any); ok {
+				if _, hasFloor := itemMap["floor_price"]; hasFloor {
+					t.Fatalf("CRITICAL SECURITY VIOLATION: raw JSON item has 'floor_price' key: %+v", itemMap)
+				}
+				rawMaps = append(rawMaps, itemMap)
+			}
+		}
 	}
 
 	if len(searchResp.Results) == 0 {
-		t.Fatalf("expected at least 1 result for query 'earbuds', got 0")
+		t.Fatalf("expected at least 1 search result for 'earbuds', got 0")
 	}
 
-	// Verify field mapping
-	first := searchResp.Results[0]
-	if first.ID == "" || first.Name == "" || first.Price <= 0 {
-		t.Fatalf("invalid product format in results: %+v", first)
+	foundAirBass := false
+	for _, p := range searchResp.Results {
+		if strings.Contains(strings.ToLower(p.Name), "airbass") {
+			foundAirBass = true
+		}
+		if p.Price <= 0 {
+			t.Errorf("expected positive price in paise, got %d", p.Price)
+		}
+	}
+	if !foundAirBass {
+		t.Errorf("expected AirBass earbuds in search results")
 	}
 }
 
@@ -99,16 +120,18 @@ func TestSearchCatalog_CategoryAndPriceFilter(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	handler := handleSearchCatalog(pool, auditLogger)
+	handler := handleSearchCatalog(pool, auditLogger, cfg)
 
 	// Filter by Category = 'Wearables' and max_price = 200000 (₹2,000)
 	req := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name: "search_catalog",
 			Arguments: map[string]any{
-				"category":  "Wearables",
-				"max_price": 200000,
+				"merchant_api_key": "demo-key-1",
+				"category":         "Wearables",
+				"max_price":        200000,
 			},
 		},
 	}
@@ -151,8 +174,9 @@ func TestGetProductDetails_ZeroLeakageAndLookup(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	handler := handleGetProductDetails(pool, auditLogger)
+	handler := handleGetProductDetails(pool, auditLogger, cfg)
 
 	// Known static seed ID
 	targetID := "11111111-1111-1111-1111-111111111111"
@@ -160,7 +184,8 @@ func TestGetProductDetails_ZeroLeakageAndLookup(t *testing.T) {
 		Params: mcp.CallToolParams{
 			Name: "get_product_details",
 			Arguments: map[string]any{
-				"product_id": targetID,
+				"merchant_api_key": "demo-key-1",
+				"product_id":       targetID,
 			},
 		},
 	}
@@ -210,14 +235,16 @@ func TestGetProductDetails_NotFound(t *testing.T) {
 	}
 	defer pool.Close()
 
+	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	handler := handleGetProductDetails(pool, auditLogger)
+	handler := handleGetProductDetails(pool, auditLogger, cfg)
 
 	req := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name: "get_product_details",
 			Arguments: map[string]any{
-				"product_id": "00000000-0000-0000-0000-000000000000",
+				"merchant_api_key": "demo-key-1",
+				"product_id":       "00000000-0000-0000-0000-000000000000",
 			},
 		},
 	}

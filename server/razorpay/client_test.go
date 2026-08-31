@@ -77,6 +77,7 @@ func TestClient_HTTPBasicAuthAndPayload(t *testing.T) {
 
 	client := NewClient(expectedKeyID, expectedSecret)
 	client.baseURL = server.URL // Override for mock server
+	client.client = server.Client()
 
 	ctx := context.Background()
 	order, err := client.CreateOrder(ctx, CreateOrderRequest{

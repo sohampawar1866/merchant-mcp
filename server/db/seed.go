@@ -13,6 +13,7 @@ import (
 // SeedProduct represents a product record loaded from seed JSON.
 type SeedProduct struct {
 	ID          string         `json:"id"`
+	MerchantID  string         `json:"merchant_id,omitempty"`
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	Category    string         `json:"category"`
@@ -26,14 +27,23 @@ type SeedProduct struct {
 
 // AutoSeed populates the products table with seed catalog data if the table is currently empty.
 func AutoSeed(ctx context.Context, pool *pgxpool.Pool, seedFilePath string) error {
+	return SeedMerchantCatalog(ctx, pool, DefaultDemoMerchantID, seedFilePath)
+}
+
+// SeedMerchantCatalog seeds products for a specific merchant.
+func SeedMerchantCatalog(ctx context.Context, pool *pgxpool.Pool, merchantID, seedFilePath string) error {
+	if merchantID == "" {
+		merchantID = DefaultDemoMerchantID
+	}
+
 	var count int
-	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM products").Scan(&count)
+	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM products WHERE merchant_id = $1", merchantID).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("db: failed to check products count: %w", err)
 	}
 
 	if count > 0 {
-		log.Printf("db: products table already has %d entries, skipping auto-seed", count)
+		log.Printf("db: merchant %s products table already has %d entries, skipping seed", merchantID, count)
 		return nil
 	}
 
@@ -49,9 +59,9 @@ func AutoSeed(ctx context.Context, pool *pgxpool.Pool, seedFilePath string) erro
 
 	query := `
 		INSERT INTO products (
-			id, name, description, category, tags, tags_source, base_price, floor_price, stock, attributes, created_at, updated_at
+			id, merchant_id, name, description, category, tags, tags_source, base_price, floor_price, stock, attributes, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()
 		) ON CONFLICT (id) DO NOTHING;
 	`
 
@@ -67,8 +77,14 @@ func AutoSeed(ctx context.Context, pool *pgxpool.Pool, seedFilePath string) erro
 			tagsSource = "ai"
 		}
 
+		prodMerchantID := p.MerchantID
+		if prodMerchantID == "" {
+			prodMerchantID = merchantID
+		}
+
 		_, err = pool.Exec(ctx, query,
 			p.ID,
+			prodMerchantID,
 			p.Name,
 			p.Description,
 			p.Category,
@@ -85,6 +101,6 @@ func AutoSeed(ctx context.Context, pool *pgxpool.Pool, seedFilePath string) erro
 		inserted++
 	}
 
-	log.Printf("db: successfully seeded %d products from %s", inserted, seedFilePath)
+	log.Printf("db: successfully seeded %d products for merchant %s from %s", inserted, merchantID, seedFilePath)
 	return nil
 }

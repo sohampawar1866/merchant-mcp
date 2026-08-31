@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/auth"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
 	"github.com/sohampawar1866/merchant-mcp/server/db"
 	"github.com/sohampawar1866/merchant-mcp/server/pricing"
@@ -44,6 +45,9 @@ func RegisterNegotiateTool(s *server.MCPServer, pool *pgxpool.Pool, auditLogger 
 		mcp.WithString("agent_session_id",
 			mcp.Description("Optional session identifier for tracking negotiation history and attempt counts"),
 		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key"),
+		),
 	)
 
 	s.AddTool(negotiateTool, handleNegotiateOffer(pool, auditLogger, cfg))
@@ -53,6 +57,16 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		correlationID := uuid.New()
+
+		// Central Merchant Authentication & Platform Kill Switch check
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 
 		productID, err := request.RequireString("product_id")
 		if err != nil {
@@ -70,6 +84,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 		}
 
 		inputArgs := map[string]any{
+			"merchant_id":      merchant.ID,
 			"product_id":       productID,
 			"proposed_price":   proposedPrice,
 			"agent_session_id": sessionID,
@@ -79,16 +94,17 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			return mcp.NewToolResultError("database connection unavailable"), nil
 		}
 
-		// 0. Dynamic feature check: Is negotiation enabled live?
-		if !db.GetSettingBool(ctx, pool, "enable_negotiation", cfg.EnableNegotiation) {
+		// Dynamic feature check: Is negotiation enabled for this merchant?
+		if !db.GetMerchantSettingBool(ctx, pool, merchant.ID, "enable_negotiation", cfg.EnableNegotiation) {
 			resp := NegotiateOfferResponse{
 				Decision:    "rejected",
 				ReasonCode:  "NEGOTIATION_DISABLED",
 				Attempt:     1,
-				MaxAttempts: db.GetSettingInt(ctx, pool, "max_negotiation_attempts", cfg.MaxNegotiationAttempts),
+				MaxAttempts: db.GetMerchantSettingInt(ctx, pool, merchant.ID, "max_negotiation_attempts", cfg.MaxNegotiationAttempts),
 			}
 			respBytes, _ := json.Marshal(resp)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "negotiate_offer",
 				Input:         inputArgs,
@@ -100,18 +116,20 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			return mcp.NewToolResultText(string(respBytes)), nil
 		}
 
-		maxAttempts := db.GetSettingInt(ctx, pool, "max_negotiation_attempts", cfg.MaxNegotiationAttempts)
-		requireHumanReview := db.GetSettingBool(ctx, pool, "enable_human_approval", cfg.EnableHumanApproval)
+		maxAttempts := db.GetMerchantSettingInt(ctx, pool, merchant.ID, "max_negotiation_attempts", cfg.MaxNegotiationAttempts)
+		requireHumanReview := db.GetMerchantSettingBool(ctx, pool, merchant.ID, "enable_human_approval", cfg.EnableHumanApproval)
+		maxDiscountPercent := db.GetMerchantSettingInt(ctx, pool, merchant.ID, "max_discount_percent", 20)
 
-		// 1. Fetch internal product pricing and stock (backend internal only - never exposed to client)
+		// 1. Fetch internal product pricing and stock (scoped strictly by merchant_id)
 		var basePrice, floorPrice, stock int
 		var productName string
 
-		query := `SELECT name, base_price, floor_price, stock FROM products WHERE id = $1;`
-		err = pool.QueryRow(ctx, query, productID).Scan(&productName, &basePrice, &floorPrice, &stock)
+		query := `SELECT name, base_price, floor_price, stock FROM products WHERE id = $1 AND merchant_id = $2;`
+		err = pool.QueryRow(ctx, query, productID, merchant.ID).Scan(&productName, &basePrice, &floorPrice, &stock)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				_ = auditLogger.Log(ctx, audit.Entry{
+					MerchantID:    merchant.ID,
 					CorrelationID: correlationID,
 					ToolName:      "negotiate_offer",
 					Input:         inputArgs,
@@ -119,11 +137,12 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 					ReasonCode:    "PRODUCT_NOT_FOUND",
 					DurationMs:    time.Since(start).Milliseconds(),
 				})
-				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s", productID)), nil
+				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s in store: %s", productID, merchant.Name)), nil
 			}
 
 			errOutput := fmt.Sprintf("database query failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "negotiate_offer",
 				Input:         inputArgs,
@@ -145,6 +164,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			respBytes, _ := json.Marshal(resp)
 
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "negotiate_offer",
 				Input:         inputArgs,
@@ -156,10 +176,10 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			return mcp.NewToolResultText(string(respBytes)), nil
 		}
 
-		// 3. Query previous attempt count for this product and session
+		// 3. Query previous attempt count for this product, merchant, and session
 		var previousAttempts int
-		countQuery := `SELECT COUNT(*) FROM negotiations WHERE product_id = $1 AND agent_session_id = $2;`
-		_ = pool.QueryRow(ctx, countQuery, productID, sessionID).Scan(&previousAttempts)
+		countQuery := `SELECT COUNT(*) FROM negotiations WHERE product_id = $1 AND merchant_id = $2 AND agent_session_id = $3;`
+		_ = pool.QueryRow(ctx, countQuery, productID, merchant.ID, sessionID).Scan(&previousAttempts)
 
 		attemptNumber := previousAttempts + 1
 
@@ -170,18 +190,18 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			ProposedPrice:      proposedPrice,
 			AttemptNumber:      attemptNumber,
 			MaxAttempts:        maxAttempts,
-			MaxDiscountPercent: 20, // default ceiling
+			MaxDiscountPercent: maxDiscountPercent,
 			RequireHumanReview: requireHumanReview,
 		}
 
 		evalResult := pricing.EvaluateOffer(evalInput)
 
-		// 5. Persist negotiation attempt into negotiations table
+		// 5. Persist negotiation attempt into negotiations table with merchant_id
 		insertQuery := `
 			INSERT INTO negotiations (
-				product_id, agent_session_id, proposed_price, decision, reason_code, counter_offer, attempt_number, created_at
+				merchant_id, product_id, agent_session_id, proposed_price, decision, reason_code, counter_offer, attempt_number, created_at
 			) VALUES (
-				$1, $2, $3, $4, $5, $6, $7, NOW()
+				$1, $2, $3, $4, $5, $6, $7, $8, NOW()
 			);
 		`
 		var counterOfferVal *int
@@ -190,6 +210,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 		}
 
 		_, err = pool.Exec(ctx, insertQuery,
+			merchant.ID,
 			productID,
 			sessionID,
 			proposedPrice,
@@ -209,7 +230,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			FinalPrice:   evalResult.FinalPrice,
 			CounterOffer: evalResult.CounterOffer,
 			Attempt:      attemptNumber,
-			MaxAttempts:  cfg.MaxNegotiationAttempts,
+			MaxAttempts:  maxAttempts,
 		}
 
 		respBytes, err := json.Marshal(response)
@@ -219,6 +240,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 
 		// 7. Write structured audit log
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "negotiate_offer",
 			Input:         inputArgs,

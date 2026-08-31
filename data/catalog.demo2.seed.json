@@ -1,0 +1,78 @@
+[
+  {
+    "id": "20000000-0000-0000-0000-000000000001",
+    "merchant_id": "00000000-0000-0000-0000-000000000002",
+    "name": "NomadCanvas Waterproof Duffel Bag",
+    "description": "50L heavy-duty waxed canvas travel duffel with waterproof zippers, shoe compartment, and padded shoulder straps.",
+    "category": "Travel & Gear",
+    "tags": ["travel", "duffel", "waterproof", "bag", "canvas", "weekend"],
+    "tags_source": "merchant_edited",
+    "base_price": 349900,
+    "floor_price": 289900,
+    "stock": 35,
+    "attributes": {
+      "brand": "NomadCanvas",
+      "capacity_liters": 50,
+      "material": "Waxed Cotton Canvas",
+      "color": "Safari Olive",
+      "warranty_months": 24
+    }
+  },
+  {
+    "id": "20000000-0000-0000-0000-000000000002",
+    "merchant_id": "00000000-0000-0000-0000-000000000002",
+    "name": "ThermoVessel Smart Insulated Flask",
+    "description": "750ml vacuum insulated stainless steel water bottle with LED touch temperature display and 24-hour cold retention.",
+    "category": "Lifestyle",
+    "tags": ["flask", "bottle", "insulated", "smart", "temperature", "hydration"],
+    "tags_source": "merchant_edited",
+    "base_price": 189900,
+    "floor_price": 154900,
+    "stock": 50,
+    "attributes": {
+      "brand": "ThermoVessel",
+      "capacity_ml": 750,
+      "temp_display": "LED Touch",
+      "material": "18/8 Stainless Steel",
+      "warranty_months": 12
+    }
+  },
+  {
+    "id": "20000000-0000-0000-0000-000000000003",
+    "merchant_id": "00000000-0000-0000-0000-000000000002",
+    "name": "SolarPack 24000mAh Solar Power Bank",
+    "description": "Rugged outdoor power bank with 4 folding high-efficiency solar panels, Qi wireless charging, and ultra-bright LED camping light.",
+    "category": "Travel & Gear",
+    "tags": ["power-bank", "solar", "outdoor", "camping", "wireless-charging", "rugged"],
+    "tags_source": "merchant_edited",
+    "base_price": 299900,
+    "floor_price": 249900,
+    "stock": 40,
+    "attributes": {
+      "brand": "SolarPack",
+      "capacity_mah": 24000,
+      "solar_panels": 4,
+      "flashlight_lumens": 500,
+      "warranty_months": 18
+    }
+  },
+  {
+    "id": "20000000-0000-0000-0000-000000000004",
+    "merchant_id": "00000000-0000-0000-0000-000000000002",
+    "name": "LumbarPro Ergonomic Mesh Chair",
+    "description": "Breathable Korean mesh desk chair with dynamic 3D lumbar support, 4D adjustable armrests, and 135-degree tilt mechanism.",
+    "category": "Office",
+    "tags": ["chair", "ergonomic", "mesh", "office", "lumbar-support", "desk-setup"],
+    "tags_source": "merchant_edited",
+    "base_price": 1499900,
+    "floor_price": 1249900,
+    "stock": 12,
+    "attributes": {
+      "brand": "LumbarPro",
+      "material": "Korean Polymer Mesh",
+      "max_weight_kg": 150,
+      "tilt_degrees": 135,
+      "warranty_months": 36
+    }
+  }
+]

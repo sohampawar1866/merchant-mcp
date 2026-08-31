@@ -10,16 +10,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// DefaultDemoMerchantID is used when merchant_id is not specified
+const DefaultDemoMerchantID = "00000000-0000-0000-0000-000000000001"
+
 // Entry defines a single audit log record for an MCP tool call.
 type Entry struct {
-	CorrelationID uuid.UUID
-	ToolName      string
-	Input         any
-	Decision      string // "approved", "rejected", "pending_approval", or "n/a" for read-only
-	ReasonCode    string // Optional reason code (e.g. "BELOW_FLOOR", "MAX_ATTEMPTS_EXCEEDED", "OK")
-	Output        any
-	ErrorMessage  string
-	DurationMs    int64
+	MerchantID    string    `json:"merchant_id,omitempty"`
+	CorrelationID uuid.UUID `json:"correlation_id"`
+	ToolName      string    `json:"tool_name"`
+	Input         any       `json:"input"`
+	Decision      string    `json:"decision"` // "approved", "rejected", "pending_approval", or "n/a" for read-only
+	ReasonCode    string    `json:"reason_code"` // Optional reason code (e.g. "BELOW_FLOOR", "MAX_ATTEMPTS_EXCEEDED", "OK")
+	Output        any       `json:"output"`
+	ErrorMessage  string    `json:"error_message,omitempty"`
+	DurationMs    int64     `json:"duration_ms"`
 }
 
 // Logger handles persistence of audit entries into PostgreSQL.
@@ -47,6 +51,11 @@ func (l *Logger) Log(ctx context.Context, entry Entry) error {
 
 	if entry.Decision == "" {
 		entry.Decision = "n/a"
+	}
+
+	merchantID := entry.MerchantID
+	if merchantID == "" {
+		merchantID = DefaultDemoMerchantID
 	}
 
 	var inputBytes, outputBytes []byte
@@ -77,20 +86,21 @@ func (l *Logger) Log(ctx context.Context, entry Entry) error {
 	}
 
 	if l.pool == nil {
-		log.Printf("[AUDIT-FALLBACK] tool=%s correlation_id=%s decision=%s reason=%s duration=%dms",
-			entry.ToolName, entry.CorrelationID, entry.Decision, entry.ReasonCode, entry.DurationMs)
+		log.Printf("[AUDIT-FALLBACK] merchant=%s tool=%s correlation_id=%s decision=%s reason=%s duration=%dms",
+			merchantID, entry.ToolName, entry.CorrelationID, entry.Decision, entry.ReasonCode, entry.DurationMs)
 		return nil
 	}
 
 	query := `
 		INSERT INTO audit_log (
-			correlation_id, tool_name, input, decision, reason_code, output, error_message, duration_ms, created_at
+			merchant_id, correlation_id, tool_name, input, decision, reason_code, output, error_message, duration_ms, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, NOW()
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
 		);
 	`
 
 	_, err = l.pool.Exec(ctx, query,
+		merchantID,
 		entry.CorrelationID,
 		entry.ToolName,
 		inputBytes,

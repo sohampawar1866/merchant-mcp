@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Plus, RefreshCw, Download, Edit2, Trash2, Lock } from 'lucide-react';
 import { ProductModal } from './ProductModal';
 
-export function CatalogTab() {
+export function CatalogTab({ merchantId }: { merchantId: string }) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,10 +17,10 @@ export function CatalogTab() {
     setLoading(true);
     setErrorMessage('');
     try {
-      const res = await fetch('/api/catalog');
+      const res = await fetch(`/api/catalog?merchant_id=${merchantId}`);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to load catalog from database');
+        throw new Error(data.message || data.error || 'Failed to load catalog from database');
       }
       setProducts(data.products || []);
     } catch (e: any) {
@@ -33,7 +33,7 @@ export function CatalogTab() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [merchantId]);
 
   const handleImportRazorpay = async () => {
     setImporting(true);
@@ -42,11 +42,11 @@ export function CatalogTab() {
       const res = await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ merchant_id: merchantId }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Razorpay product import failed');
+        throw new Error(data.message || data.error || 'Razorpay product import failed');
       }
       setNotification(`Successfully imported ${data.imported_products?.length || 1} product(s) from Razorpay!`);
       setTimeout(() => setNotification(''), 4000);
@@ -63,10 +63,10 @@ export function CatalogTab() {
     if (!confirm(`Are you sure you want to remove "${name}" from your store catalog?`)) return;
     setErrorMessage('');
     try {
-      const res = await fetch(`/api/catalog/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/catalog/${id}?merchant_id=${merchantId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete product');
+        throw new Error(data.message || data.error || 'Failed to delete product');
       }
       fetchProducts();
     } catch (e: any) {
@@ -74,6 +74,7 @@ export function CatalogTab() {
       setErrorMessage(e.message || 'Product deletion failed');
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -334,6 +335,7 @@ export function CatalogTab() {
         onClose={() => setModalOpen(false)}
         onSaved={fetchProducts}
         product={selectedProduct}
+        merchantId={merchantId}
       />
     </div>
   );

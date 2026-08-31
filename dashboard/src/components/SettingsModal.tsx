@@ -21,9 +21,10 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSettingsChanged?: () => void;
+  merchantId: string;
 }
 
-export function SettingsModal({ isOpen, onClose, onSettingsChanged }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, onSettingsChanged, merchantId }: SettingsModalProps) {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
@@ -38,13 +39,13 @@ export function SettingsModal({ isOpen, onClose, onSettingsChanged }: SettingsMo
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch(`/api/settings?merchant_id=${merchantId}`);
       const data = await res.json();
       if (data.success && data.settings) {
         setSettings(data.settings);
         setKeyId(data.settings['razorpay_key_id']?.value || '');
         setKeySecret(data.settings['razorpay_key_secret']?.value || '');
-        setWebhookSecret(data.settings['razorpay_webhook_secret']?.value || 'agentic_checkout_secret_2026');
+        setWebhookSecret(data.settings['razorpay_webhook_secret']?.value || '');
       }
     } catch (e) {
       console.error('Failed to load settings:', e);
@@ -58,7 +59,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsChanged }: SettingsMo
       fetchSettings();
       setSaveSuccessMsg('');
     }
-  }, [isOpen]);
+  }, [isOpen, merchantId]);
 
   const updateSetting = async (key: string, value: any) => {
     setUpdatingKey(key);
@@ -66,7 +67,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsChanged }: SettingsMo
       const res = await fetch('/api/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value: String(value) }),
+        body: JSON.stringify({ merchant_id: merchantId, key, value: String(value) }),
       });
       const data = await res.json();
       if (data.success) {

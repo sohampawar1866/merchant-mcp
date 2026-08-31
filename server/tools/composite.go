@@ -14,6 +14,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/auth"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
 	"github.com/sohampawar1866/merchant-mcp/server/db"
 )
@@ -49,6 +50,9 @@ func RegisterCompositeTools(
 		mcp.WithString("intent",
 			mcp.Required(),
 			mcp.Description("Natural language buyer purchase intent (e.g. 'earbuds under 2000 rupees, good bass', 'mechanical keyboard below 6000')"),
+		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key"),
 		),
 	)
 	s.AddTool(compositeTool, handleFindAndPrice(pool, auditLogger, cfg))
@@ -94,19 +98,30 @@ func handleFindAndPrice(
 		start := time.Now()
 		correlationID := uuid.New()
 
+		// Central Merchant Authentication & Platform Kill Switch check
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+
 		intent, err := request.RequireString("intent")
 		if err != nil {
 			return mcp.NewToolResultError("missing required parameter: intent"), nil
 		}
 
-		// 0. Dynamic check: Is find_and_price enabled live?
-		if !db.GetSettingBool(ctx, pool, "enable_find_and_price", cfg.EnableFindAndPrice) {
-			return mcp.NewToolResultError("find_and_price feature is currently disabled by store policy"), nil
+		// Dynamic check: Is find_and_price enabled for this merchant?
+		if !db.GetMerchantSettingBool(ctx, pool, merchant.ID, "enable_find_and_price", cfg.EnableFindAndPrice) {
+			return mcp.NewToolResultError(fmt.Sprintf("find_and_price feature is currently disabled by store policy for %s", merchant.Name)), nil
 		}
 
 		parsedBudget, cleanKeywords := parseIntentBudget(intent)
 
 		inputArgs := map[string]any{
+			"merchant_id":         merchant.ID,
 			"intent":              intent,
 			"parsed_budget_paise": parsedBudget,
 			"clean_keywords":      cleanKeywords,
@@ -120,12 +135,12 @@ func handleFindAndPrice(
 
 		words := strings.Fields(cleanKeywords)
 		var queryBuilder strings.Builder
-		queryArgs := make([]any, 0)
+		queryArgs := []any{merchant.ID}
 
 		queryBuilder.WriteString(`
 			SELECT id, name, description, category, tags, base_price, stock, attributes
 			FROM products
-			WHERE 1=1
+			WHERE merchant_id = $1
 		`)
 
 		if parsedBudget > 0 {
@@ -153,6 +168,7 @@ func handleFindAndPrice(
 		if err != nil {
 			errOutput := fmt.Sprintf("composite query failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "find_and_price",
 				Input:         inputArgs,
@@ -201,7 +217,7 @@ func handleFindAndPrice(
 
 		// Fallback: if no keyword matches found but budget provided, return items within budget
 		if len(options) == 0 && parsedBudget > 0 {
-			fallbackRows, err := pool.Query(ctx, "SELECT id, name, description, category, tags, base_price, stock, attributes FROM products WHERE base_price <= $1 ORDER BY base_price ASC LIMIT 5;", parsedBudget)
+			fallbackRows, err := pool.Query(ctx, "SELECT id, name, description, category, tags, base_price, stock, attributes FROM products WHERE merchant_id = $1 AND base_price <= $2 ORDER BY base_price ASC LIMIT 5;", merchant.ID, parsedBudget)
 			if err == nil {
 				defer fallbackRows.Close()
 				for fallbackRows.Next() {
@@ -232,6 +248,7 @@ func handleFindAndPrice(
 		respBytes, _ := json.Marshal(response)
 
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "find_and_price",
 			Input:         inputArgs,

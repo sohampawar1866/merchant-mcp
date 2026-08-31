@@ -39,21 +39,23 @@ type RazorpayWebhookEvent struct {
 	} `json:"payload"`
 }
 
-// Receiver handles Razorpay webhook notifications.
+// Receiver handles Razorpay webhook notifications across multiple merchants.
 type Receiver struct {
 	pool        *pgxpool.Pool
 	auditLogger *audit.Logger
 	secret      string
 	strictMode  bool
+	passphrase  string
 }
 
 // NewReceiver creates a new webhook receiver instance.
-func NewReceiver(pool *pgxpool.Pool, auditLogger *audit.Logger, secret string, strictMode bool) *Receiver {
+func NewReceiver(pool *pgxpool.Pool, auditLogger *audit.Logger, secret string, strictMode bool, passphrase string) *Receiver {
 	return &Receiver{
 		pool:        pool,
 		auditLogger: auditLogger,
 		secret:      secret,
 		strictMode:  strictMode,
+		passphrase:  passphrase,
 	}
 }
 
@@ -88,31 +90,7 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	signature := r.Header.Get("X-Razorpay-Signature")
 
-	// 1. Dynamic Signature Verification from store_settings
-	activeSecret := db.GetSettingString(r.Context(), rec.pool, "razorpay_webhook_secret", rec.secret)
-	activeStrictMode := db.GetSettingBool(r.Context(), rec.pool, "webhook_strict_mode", rec.strictMode)
-
-	if activeSecret != "" {
-		valid := VerifySignature(bodyBytes, signature, activeSecret)
-		if !valid {
-			log.Printf("webhook: invalid HMAC signature received: %s", signature)
-			if activeStrictMode {
-				_ = rec.auditLogger.Log(r.Context(), audit.Entry{
-					CorrelationID: correlationID,
-					ToolName:      "webhook_razorpay",
-					Input:         map[string]string{"signature": signature},
-					Decision:      "rejected",
-					ReasonCode:    "INVALID_WEBHOOK_SIGNATURE",
-					ErrorMessage:  "HMAC signature mismatch",
-					DurationMs:    time.Since(start).Milliseconds(),
-				})
-				http.Error(w, "Invalid signature", http.StatusBadRequest)
-				return
-			}
-		}
-	}
-
-	// 2. Parse Event Payload
+	// 1. Parse Event Payload
 	var event RazorpayWebhookEvent
 	if err := json.Unmarshal(bodyBytes, &event); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
@@ -125,6 +103,55 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	paymentID := event.Payload.Payment.Entity.ID
 
+	// 2. Identify Merchant from matching Order or URL query param
+	merchantID := r.URL.Query().Get("merchant_id")
+	if merchantID == "" && rec.pool != nil && orderID != "" {
+		_ = rec.pool.QueryRow(r.Context(), `
+			SELECT merchant_id FROM orders WHERE razorpay_order_id = $1 OR payment_link LIKE '%' || $1 || '%';
+		`, orderID).Scan(&merchantID)
+	}
+	if merchantID == "" {
+		log.Printf("webhook: cannot resolve merchant_id from URL param or order lookup for order '%s' — rejecting", orderID)
+		http.Error(w, `{"error":"MERCHANT_UNRESOLVABLE","message":"Cannot identify merchant for this webhook — include ?merchant_id= in the webhook URL or ensure the order exists in the database"}`, http.StatusBadRequest)
+		return
+	}
+
+	// 3. Resolve Merchant Webhook Secret
+	activeSecret := rec.secret
+	if rec.pool != nil && merchantID != "" {
+		if m, err := db.GetMerchantByID(r.Context(), rec.pool, merchantID, rec.passphrase); err == nil && m.RazorpayWebhookSecret != "" {
+			activeSecret = m.RazorpayWebhookSecret
+		} else {
+			activeSecret = db.GetMerchantSettingString(r.Context(), rec.pool, merchantID, "razorpay_webhook_secret", rec.secret)
+		}
+	}
+
+	activeStrictMode := rec.strictMode
+	if rec.pool != nil && merchantID != "" {
+		activeStrictMode = db.GetMerchantSettingBool(r.Context(), rec.pool, merchantID, "webhook_strict_mode", rec.strictMode)
+	}
+
+	if activeSecret != "" {
+		valid := VerifySignature(bodyBytes, signature, activeSecret)
+		if !valid {
+			log.Printf("webhook: invalid HMAC signature for merchant %s: %s", merchantID, signature)
+			if activeStrictMode {
+				_ = rec.auditLogger.Log(r.Context(), audit.Entry{
+					MerchantID:    merchantID,
+					CorrelationID: correlationID,
+					ToolName:      "webhook_razorpay",
+					Input:         map[string]string{"signature": signature, "merchant_id": merchantID},
+					Decision:      "rejected",
+					ReasonCode:    "INVALID_WEBHOOK_SIGNATURE",
+					ErrorMessage:  "HMAC signature mismatch",
+					DurationMs:    time.Since(start).Milliseconds(),
+				})
+				http.Error(w, "Invalid signature", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
 	var newStatus string
 	switch event.Event {
 	case "payment.captured", "order.paid":
@@ -135,7 +162,7 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		newStatus = "created"
 	}
 
-	// 3. Update order in PostgreSQL
+	// 4. Update order in PostgreSQL
 	if rec.pool != nil && orderID != "" {
 		updateQuery := `
 			UPDATE orders
@@ -150,11 +177,12 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 4. Record Audit Log
+	// 5. Record Audit Log with merchant_id
 	_ = rec.auditLogger.Log(r.Context(), audit.Entry{
+		MerchantID:    merchantID,
 		CorrelationID: correlationID,
 		ToolName:      "webhook_razorpay",
-		Input:         map[string]any{"event": event.Event, "order_id": orderID, "payment_id": paymentID},
+		Input:         map[string]any{"event": event.Event, "order_id": orderID, "payment_id": paymentID, "merchant_id": merchantID},
 		Decision:      newStatus,
 		ReasonCode:    event.Event,
 		Output:        map[string]string{"status": "ok", "applied_status": newStatus},

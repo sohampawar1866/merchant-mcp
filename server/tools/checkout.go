@@ -12,6 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
+	"github.com/sohampawar1866/merchant-mcp/server/auth"
 	"github.com/sohampawar1866/merchant-mcp/server/cache"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
 	"github.com/sohampawar1866/merchant-mcp/server/db"
@@ -69,6 +70,9 @@ func RegisterCheckoutTools(
 		mcp.WithString("customer_email",
 			mcp.Description("Optional customer email address"),
 		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key"),
+		),
 	)
 	s.AddTool(checkoutTool, handleCreateCheckout(pool, rzpClient, cacheInstance, auditLogger, cfg))
 
@@ -80,8 +84,11 @@ func RegisterCheckoutTools(
 			mcp.Required(),
 			mcp.Description("The Razorpay order ID or internal order UUID to check"),
 		),
+		mcp.WithString("merchant_api_key",
+			mcp.Description("Optional merchant API key"),
+		),
 	)
-	s.AddTool(statusTool, handleCheckOrderStatus(pool, rzpClient, auditLogger))
+	s.AddTool(statusTool, handleCheckOrderStatus(pool, rzpClient, auditLogger, cfg))
 }
 
 func handleCreateCheckout(
@@ -94,6 +101,16 @@ func handleCreateCheckout(
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		correlationID := uuid.New()
+
+		// Central Merchant Authentication & Platform Kill Switch check
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 
 		productID, err := request.RequireString("product_id")
 		if err != nil {
@@ -115,6 +132,7 @@ func handleCreateCheckout(
 		customerEmail := request.GetString("customer_email", "")
 
 		inputArgs := map[string]any{
+			"merchant_id":      merchant.ID,
 			"product_id":       productID,
 			"agreed_price":     agreedPrice,
 			"idempotency_key":  idempotencyKey,
@@ -123,13 +141,15 @@ func handleCreateCheckout(
 			"customer_email":   customerEmail,
 		}
 
-		// 1. Session Rate Limiting Check (Dynamic threshold from store_settings)
-		maxRateLimit := db.GetSettingInt(ctx, pool, "max_tool_calls_per_minute", cfg.MaxToolCallsPerMinute)
+		// 1. Session Rate Limiting Check (Dynamic threshold from merchant store_settings)
+		maxRateLimit := db.GetMerchantSettingInt(ctx, pool, merchant.ID, "max_tool_calls_per_minute", cfg.MaxToolCallsPerMinute)
 		if cacheInstance != nil {
-			allowed, _, err := cacheInstance.AllowToolCall(ctx, sessionID, maxRateLimit)
+			sessionKey := fmt.Sprintf("%s:%s", merchant.ID, sessionID)
+			allowed, _, err := cacheInstance.AllowToolCall(ctx, sessionKey, maxRateLimit)
 			if err == nil && !allowed {
 				errOutput := "rate limit exceeded: too many tool requests in current minute"
 				_ = auditLogger.Log(ctx, audit.Entry{
+					MerchantID:    merchant.ID,
 					CorrelationID: correlationID,
 					ToolName:      "create_checkout",
 					Input:         inputArgs,
@@ -146,11 +166,11 @@ func handleCreateCheckout(
 			return mcp.NewToolResultError("database connection unavailable"), nil
 		}
 
-		// 2. IDEMPOTENCY CHECK: Return existing order if idempotency_key was already processed
+		// 2. IDEMPOTENCY CHECK: Return existing order if idempotency_key was already processed for this merchant
 		var existingOrderID, existingPaymentLink, existingStatus string
 		var existingPrice int
-		checkQuery := `SELECT razorpay_order_id, payment_link, agreed_price, status FROM orders WHERE idempotency_key = $1;`
-		err = pool.QueryRow(ctx, checkQuery, idempotencyKey).Scan(&existingOrderID, &existingPaymentLink, &existingPrice, &existingStatus)
+		checkQuery := `SELECT razorpay_order_id, payment_link, agreed_price, status FROM orders WHERE idempotency_key = $1 AND merchant_id = $2;`
+		err = pool.QueryRow(ctx, checkQuery, idempotencyKey, merchant.ID).Scan(&existingOrderID, &existingPaymentLink, &existingPrice, &existingStatus)
 		if err == nil {
 			// Idempotent hit! Return existing order directly without re-charging
 			response := CreateCheckoutResponse{
@@ -163,6 +183,7 @@ func handleCreateCheckout(
 			respBytes, _ := json.Marshal(response)
 
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "create_checkout",
 				Input:         inputArgs,
@@ -174,14 +195,15 @@ func handleCreateCheckout(
 			return mcp.NewToolResultText(string(respBytes)), nil
 		}
 
-		// 3. Query Product and verify Floor Price gating
+		// 3. Query Product and verify Floor Price gating for this merchant
 		var productName string
 		var basePrice, floorPrice, stock int
-		productQuery := `SELECT name, base_price, floor_price, stock FROM products WHERE id = $1;`
-		err = pool.QueryRow(ctx, productQuery, productID).Scan(&productName, &basePrice, &floorPrice, &stock)
+		productQuery := `SELECT name, base_price, floor_price, stock FROM products WHERE id = $1 AND merchant_id = $2;`
+		err = pool.QueryRow(ctx, productQuery, productID, merchant.ID).Scan(&productName, &basePrice, &floorPrice, &stock)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				_ = auditLogger.Log(ctx, audit.Entry{
+					MerchantID:    merchant.ID,
 					CorrelationID: correlationID,
 					ToolName:      "create_checkout",
 					Input:         inputArgs,
@@ -189,13 +211,14 @@ func handleCreateCheckout(
 					ReasonCode:    "PRODUCT_NOT_FOUND",
 					DurationMs:    time.Since(start).Milliseconds(),
 				})
-				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s", productID)), nil
+				return mcp.NewToolResultError(fmt.Sprintf("product not found with id: %s in store: %s", productID, merchant.Name)), nil
 			}
 			return mcp.NewToolResultError(fmt.Sprintf("database query failed: %v", err)), nil
 		}
 
 		if stock <= 0 {
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "create_checkout",
 				Input:         inputArgs,
@@ -210,6 +233,7 @@ func handleCreateCheckout(
 		if agreedPrice < floorPrice {
 			errOutput := fmt.Sprintf("gated rejection: proposed price (%d paise) is below merchant floor price", agreedPrice)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "create_checkout",
 				Input:         inputArgs,
@@ -221,16 +245,23 @@ func handleCreateCheckout(
 			return mcp.NewToolResultError(errOutput), nil
 		}
 
-		// 4. Create Razorpay Payment Link / Order with dynamic store credentials
-		keyID := db.GetSettingString(ctx, pool, "razorpay_key_id", cfg.RazorpayKeyID)
-		keySecret := db.GetSettingString(ctx, pool, "razorpay_key_secret", cfg.RazorpayKeySecret)
-		deliveryMode := db.GetSettingString(ctx, pool, "checkout_delivery_mode", cfg.CheckoutDeliveryMode)
+		// 4. Create Razorpay Payment Link using decrypted merchant credentials
+		keyID := merchant.RazorpayKeyID
+		keySecret := merchant.RazorpayKeySecret
+		if keyID == "" {
+			keyID = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_id", cfg.RazorpayKeyID)
+		}
+		if keySecret == "" {
+			keySecret = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_secret", cfg.RazorpayKeySecret)
+		}
+
+		deliveryMode := db.GetMerchantSettingString(ctx, pool, merchant.ID, "checkout_delivery_mode", cfg.CheckoutDeliveryMode)
 		upiLink := (deliveryMode == "upi_link")
 
 		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, razorpay.CreatePaymentLinkRequest{
 			Amount:        agreedPrice,
 			Currency:      "INR",
-			Description:   fmt.Sprintf("Purchase of %s", productName),
+			Description:   fmt.Sprintf("Purchase of %s (%s)", productName, merchant.Name),
 			CustomerPhone: customerPhone,
 			CustomerEmail: customerEmail,
 			UPILink:       upiLink,
@@ -238,6 +269,7 @@ func handleCreateCheckout(
 		if err != nil {
 			errOutput := fmt.Sprintf("razorpay payment link creation failed: %v", err)
 			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
 				CorrelationID: correlationID,
 				ToolName:      "create_checkout",
 				Input:         inputArgs,
@@ -248,22 +280,22 @@ func handleCreateCheckout(
 			return mcp.NewToolResultError(errOutput), nil
 		}
 
-		// 5. Persist order into PostgreSQL
+		// 5. Persist order into PostgreSQL with merchant_id
 		insertQuery := `
 			INSERT INTO orders (
-				razorpay_order_id, product_id, agreed_price, status, idempotency_key, payment_link, created_at, updated_at
+				merchant_id, razorpay_order_id, product_id, agreed_price, status, idempotency_key, payment_link, created_at, updated_at
 			) VALUES (
-				$1, $2, $3, 'created', $4, $5, NOW(), NOW()
+				$1, $2, $3, $4, 'created', $5, $6, NOW(), NOW()
 			);
 		`
-		_, err = pool.Exec(ctx, insertQuery, linkResp.ID, productID, agreedPrice, idempotencyKey, linkResp.ShortURL)
+		_, err = pool.Exec(ctx, insertQuery, merchant.ID, linkResp.ID, productID, agreedPrice, idempotencyKey, linkResp.ShortURL)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to save order: %v", err)), nil
 		}
 
 		// 6. Cache idempotency key
 		if cacheInstance != nil {
-			_ = cacheInstance.SetIdempotencyKey(ctx, idempotencyKey, linkResp.ID, 24*time.Hour)
+			_ = cacheInstance.SetIdempotencyKey(ctx, fmt.Sprintf("%s:%s", merchant.ID, idempotencyKey), linkResp.ID, 24*time.Hour)
 		}
 
 		// 7. Return checkout response
@@ -278,6 +310,7 @@ func handleCreateCheckout(
 		respBytes, _ := json.Marshal(response)
 
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "create_checkout",
 			Input:         inputArgs,
@@ -295,17 +328,30 @@ func handleCheckOrderStatus(
 	pool *pgxpool.Pool,
 	rzpClient *razorpay.Client,
 	auditLogger *audit.Logger,
+	cfg *config.Config,
 ) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := time.Now()
 		correlationID := uuid.New()
+
+		passphrase := ""
+		if cfg != nil {
+			passphrase = cfg.EncryptionPassphrase
+		}
+		merchant, err := auth.ResolveMerchant(ctx, pool, request, passphrase)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 
 		orderID, err := request.RequireString("order_id")
 		if err != nil {
 			return mcp.NewToolResultError("missing required parameter: order_id"), nil
 		}
 
-		inputArgs := map[string]any{"order_id": orderID}
+		inputArgs := map[string]any{
+			"merchant_id": merchant.ID,
+			"order_id":    orderID,
+		}
 
 		if pool == nil {
 			return mcp.NewToolResultError("database connection unavailable"), nil
@@ -317,12 +363,13 @@ func handleCheckOrderStatus(
 		query := `
 			SELECT id, razorpay_order_id, status, agreed_price, payment_link
 			FROM orders
-			WHERE razorpay_order_id = $1 OR id::text = $1;
+			WHERE merchant_id = $1 AND (razorpay_order_id = $2 OR id::text = $2);
 		`
-		err = pool.QueryRow(ctx, query, orderID).Scan(&id, &razorpayOrderID, &status, &agreedPrice, &paymentLink)
+		err = pool.QueryRow(ctx, query, merchant.ID, orderID).Scan(&id, &razorpayOrderID, &status, &agreedPrice, &paymentLink)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				_ = auditLogger.Log(ctx, audit.Entry{
+					MerchantID:    merchant.ID,
 					CorrelationID: correlationID,
 					ToolName:      "check_order_status",
 					Input:         inputArgs,
@@ -330,7 +377,7 @@ func handleCheckOrderStatus(
 					ReasonCode:    "ORDER_NOT_FOUND",
 					DurationMs:    time.Since(start).Milliseconds(),
 				})
-				return mcp.NewToolResultError(fmt.Sprintf("order not found with id: %s", orderID)), nil
+				return mcp.NewToolResultError(fmt.Sprintf("order not found with id: %s for store %s", orderID, merchant.Name)), nil
 			}
 			return mcp.NewToolResultError(fmt.Sprintf("database query failed: %v", err)), nil
 		}
@@ -345,6 +392,7 @@ func handleCheckOrderStatus(
 		respBytes, _ := json.Marshal(response)
 
 		_ = auditLogger.Log(ctx, audit.Entry{
+			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "check_order_status",
 			Input:         inputArgs,

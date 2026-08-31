@@ -15,7 +15,7 @@ import (
 func TestWebhook_ValidHMACSignature(t *testing.T) {
 	secret := "test_secret_12345"
 	auditLogger := audit.NewLogger(nil, "full")
-	receiver := NewReceiver(nil, auditLogger, secret, true)
+	receiver := NewReceiver(nil, auditLogger, secret, true, "test_passphrase")
 
 	payload := []byte(`{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_test_999","order_id":"order_test_999","status":"captured","amount":165000}}}}`)
 
@@ -24,7 +24,7 @@ func TestWebhook_ValidHMACSignature(t *testing.T) {
 	mac.Write(payload)
 	validSignature := hex.EncodeToString(mac.Sum(nil))
 
-	req := httptest.NewRequest("POST", "/webhook/razorpay", bytes.NewReader(payload))
+	req := httptest.NewRequest("POST", "/webhook/razorpay?merchant_id=00000000-0000-0000-0000-000000000001", bytes.NewReader(payload))
 	req.Header.Set("X-Razorpay-Signature", validSignature)
 	w := httptest.NewRecorder()
 
@@ -38,11 +38,11 @@ func TestWebhook_ValidHMACSignature(t *testing.T) {
 func TestWebhook_InvalidHMACSignature_StrictMode(t *testing.T) {
 	secret := "test_secret_12345"
 	auditLogger := audit.NewLogger(nil, "full")
-	receiver := NewReceiver(nil, auditLogger, secret, true) // strict mode = true
+	receiver := NewReceiver(nil, auditLogger, secret, true, "test_passphrase") // strict mode = true
 
 	payload := []byte(`{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_bad","order_id":"order_bad","status":"captured","amount":100}}}}`)
 
-	req := httptest.NewRequest("POST", "/webhook/razorpay", bytes.NewReader(payload))
+	req := httptest.NewRequest("POST", "/webhook/razorpay?merchant_id=00000000-0000-0000-0000-000000000001", bytes.NewReader(payload))
 	req.Header.Set("X-Razorpay-Signature", "invalid_forged_signature_hex")
 	w := httptest.NewRecorder()
 
