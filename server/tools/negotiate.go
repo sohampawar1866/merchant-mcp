@@ -78,6 +78,30 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			return mcp.NewToolResultError("database connection unavailable"), nil
 		}
 
+		// 0. Dynamic feature check: Is negotiation enabled live?
+		if !db.GetSettingBool(ctx, pool, "enable_negotiation", cfg.EnableNegotiation) {
+			resp := NegotiateOfferResponse{
+				Decision:    "rejected",
+				ReasonCode:  "NEGOTIATION_DISABLED",
+				Attempt:     1,
+				MaxAttempts: db.GetSettingInt(ctx, pool, "max_negotiation_attempts", cfg.MaxNegotiationAttempts),
+			}
+			respBytes, _ := json.Marshal(resp)
+			_ = auditLogger.Log(ctx, audit.Entry{
+				CorrelationID: correlationID,
+				ToolName:      "negotiate_offer",
+				Input:         inputArgs,
+				Decision:      "rejected",
+				ReasonCode:    "NEGOTIATION_DISABLED",
+				Output:        resp,
+				DurationMs:    time.Since(start).Milliseconds(),
+			})
+			return mcp.NewToolResultText(string(respBytes)), nil
+		}
+
+		maxAttempts := db.GetSettingInt(ctx, pool, "max_negotiation_attempts", cfg.MaxNegotiationAttempts)
+		requireHumanReview := db.GetSettingBool(ctx, pool, "enable_human_approval", cfg.EnableHumanApproval)
+
 		// 1. Fetch internal product pricing and stock (backend internal only - never exposed to client)
 		var basePrice, floorPrice, stock int
 		var productName string
@@ -115,7 +139,7 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 				Decision:    "rejected",
 				ReasonCode:  "PRODUCT_OUT_OF_STOCK",
 				Attempt:     1,
-				MaxAttempts: cfg.MaxNegotiationAttempts,
+				MaxAttempts: maxAttempts,
 			}
 			respBytes, _ := json.Marshal(resp)
 
@@ -144,9 +168,9 @@ func handleNegotiateOffer(pool *pgxpool.Pool, auditLogger *audit.Logger, cfg *co
 			FloorPrice:         floorPrice,
 			ProposedPrice:      proposedPrice,
 			AttemptNumber:      attemptNumber,
-			MaxAttempts:        cfg.MaxNegotiationAttempts,
+			MaxAttempts:        maxAttempts,
 			MaxDiscountPercent: 20, // default ceiling
-			RequireHumanReview: cfg.EnableHumanApproval,
+			RequireHumanReview: requireHumanReview,
 		}
 
 		evalResult := pricing.EvaluateOffer(evalInput)

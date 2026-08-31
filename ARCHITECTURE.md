@@ -283,6 +283,7 @@ sequenceDiagram
 ## 7. Database Schema & State Transitions
 
 ### 7.1 Table Definitions
+- **`store_settings`**: `key (VARCHAR(64) PRIMARY KEY)`, `value (TEXT)`, `description (TEXT)`, `category (VARCHAR(32))`, `updated_at (TIMESTAMPTZ)` — dynamic live runtime policies and feature flags.
 - **`products`**: `id (UUID PRIMARY KEY)`, `name (VARCHAR)`, `description (TEXT)`, `category (VARCHAR)`, `tags (TEXT[])`, `base_price (INTEGER)`, `floor_price (INTEGER)`, `stock (INTEGER)`, `attributes (JSONB)`.
 - **`orders`**: `id (UUID PRIMARY KEY)`, `razorpay_order_id (VARCHAR)`, `product_id (UUID)`, `agreed_price (INTEGER)`, `status (VARCHAR)`, `idempotency_key (VARCHAR UNIQUE)`, `payment_link (TEXT)`.
 - **`negotiations`**: `id (UUID PRIMARY KEY)`, `product_id (UUID)`, `agent_session_id (VARCHAR)`, `proposed_price (INTEGER)`, `counter_offer (INTEGER)`, `decision (VARCHAR)`, `reason_code (VARCHAR)`, `attempt_number (INTEGER)`.

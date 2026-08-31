@@ -84,21 +84,13 @@ func main() {
 	// Register Core Catalog Tools
 	tools.RegisterCatalogTools(s, pool, auditLogger)
 
-	// Feature Flag: find_and_price composite tool
-	if cfg.EnableFindAndPrice {
-		tools.RegisterCompositeTools(s, pool, auditLogger, cfg)
-		log.Println("Feature: find_and_price composite tool registered")
-	} else {
-		log.Println("Feature: find_and_price composite tool disabled by configuration")
-	}
+	// Register Composite Tools (dynamically controlled via store_settings)
+	tools.RegisterCompositeTools(s, pool, auditLogger, cfg)
+	log.Println("Feature: find_and_price composite tool registered (dynamic policy enabled)")
 
-	// Feature Flag: negotiate_offer tool
-	if cfg.EnableNegotiation {
-		tools.RegisterNegotiateTool(s, pool, auditLogger, cfg)
-		log.Println("Feature: negotiate_offer tool registered")
-	} else {
-		log.Println("Feature: negotiate_offer tool disabled by configuration")
-	}
+	// Register Negotiation Tool (dynamically controlled via store_settings)
+	tools.RegisterNegotiateTool(s, pool, auditLogger, cfg)
+	log.Println("Feature: negotiate_offer tool registered (dynamic policy enabled)")
 
 	// Register Checkout Tools
 	tools.RegisterCheckoutTools(s, pool, rzpClient, redisCache, auditLogger, cfg)

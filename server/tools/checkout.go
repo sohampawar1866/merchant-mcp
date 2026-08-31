@@ -14,6 +14,7 @@ import (
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
 	"github.com/sohampawar1866/merchant-mcp/server/cache"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
+	"github.com/sohampawar1866/merchant-mcp/server/db"
 	"github.com/sohampawar1866/merchant-mcp/server/razorpay"
 )
 
@@ -122,9 +123,10 @@ func handleCreateCheckout(
 			"customer_email":   customerEmail,
 		}
 
-		// 1. Session Rate Limiting Check
+		// 1. Session Rate Limiting Check (Dynamic threshold from store_settings)
+		maxRateLimit := db.GetSettingInt(ctx, pool, "max_tool_calls_per_minute", cfg.MaxToolCallsPerMinute)
 		if cacheInstance != nil {
-			allowed, _, err := cacheInstance.AllowToolCall(ctx, sessionID, cfg.MaxToolCallsPerMinute)
+			allowed, _, err := cacheInstance.AllowToolCall(ctx, sessionID, maxRateLimit)
 			if err == nil && !allowed {
 				errOutput := "rate limit exceeded: too many tool requests in current minute"
 				_ = auditLogger.Log(ctx, audit.Entry{

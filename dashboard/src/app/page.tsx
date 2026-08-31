@@ -8,14 +8,17 @@ import {
   Package,
   RefreshCw,
   Zap,
+  Sliders,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/OverviewTab';
 import { AuditTrailTab } from '@/components/AuditTrailTab';
 import { TransactionsTab } from '@/components/TransactionsTab';
 import { CatalogTab } from '@/components/CatalogTab';
+import { SettingsModal } from '@/components/SettingsModal';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'transactions' | 'catalog'>('overview');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
   const [metricsError, setMetricsError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -97,6 +100,15 @@ export default function DashboardPage() {
             </div>
 
             <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="px-3 py-1.5 rounded-full bg-figma-surfaceSoft hover:bg-zinc-100 text-figma-ink flex items-center gap-1.5 transition border border-figma-hairline text-xs font-mono font-bold tracking-wider uppercase"
+              title="Configure store guardrails & feature flags live"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Store Policies</span>
+            </button>
+
+            <button
               onClick={fetchMetrics}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-figma-surfaceSoft hover:bg-figma-hairline text-figma-ink flex items-center justify-center transition border border-figma-hairline"
               title="Refresh store metrics"
@@ -153,6 +165,13 @@ export default function DashboardPage() {
         {activeTab === 'transactions' && <TransactionsTab />}
         {activeTab === 'catalog' && <CatalogTab />}
       </main>
+
+      {/* Live Store Guardrails & Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsChanged={fetchMetrics}
+      />
 
       {/* Figma Monochrome Footer */}
       <footer className="mt-auto bg-figma-canvas border-t border-figma-hairline py-6 px-4 sm:px-6 text-xs text-figma-ink flex flex-col sm:flex-row items-center justify-between gap-3">

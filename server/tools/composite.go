@@ -15,6 +15,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sohampawar1866/merchant-mcp/server/audit"
 	"github.com/sohampawar1866/merchant-mcp/server/config"
+	"github.com/sohampawar1866/merchant-mcp/server/db"
 )
 
 // MatchOption represents a product match annotated with natural-language reason.
@@ -96,6 +97,11 @@ func handleFindAndPrice(
 		intent, err := request.RequireString("intent")
 		if err != nil {
 			return mcp.NewToolResultError("missing required parameter: intent"), nil
+		}
+
+		// 0. Dynamic check: Is find_and_price enabled live?
+		if !db.GetSettingBool(ctx, pool, "enable_find_and_price", cfg.EnableFindAndPrice) {
+			return mcp.NewToolResultError("find_and_price feature is currently disabled by store policy"), nil
 		}
 
 		parsedBudget, cleanKeywords := parseIntentBudget(intent)

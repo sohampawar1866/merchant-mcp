@@ -17,9 +17,24 @@
 
 ## Quickstart
 
-You can run AgenticCheckout in three ways: via **Pre-built GitHub Container Packages**, **Docker Compose**, or **Local Source Code**.
+You can run AgenticCheckout via **Native Desktop App (Wails)**, **Pre-built GitHub Container Packages**, **Docker Compose**, or **Local Source Code**.
 
-### Option 1: Run Pre-built Packages from GitHub Container Registry (Fastest)
+### Option 0: Native Desktop App (Fastest & Simplest GUI)
+
+Launch the self-contained native desktop app (`installer/build/bin/AgenticCheckout.app`, ~8MB):
+- Automatically detects if Docker Desktop is installed and running (with one-click launch / install helper)
+- Setup wizard to enter Razorpay credentials with password masking and validation
+- Configures MCP Transport (`streamablehttp`, `sse`, `stdio`) and ports
+- Atomically generates `.env` and orchestrates Docker containers with real-time log streaming
+
+```bash
+# Launch on macOS
+open installer/build/bin/AgenticCheckout.app
+```
+
+---
+
+### Option 1: Run Pre-built Packages from GitHub Container Registry
 
 Pull the official pre-built production container images directly without compiling from source:
 
@@ -194,19 +209,19 @@ go test ./server/tools/ -run TestE2E -v
 | `MAX_NEGOTIATION_ATTEMPTS` | `3` | Maximum negotiation rounds per product session |
 | `MAX_TOOL_CALLS_PER_MINUTE` | `30` | Session rate limiting threshold |
 | `WEBHOOK_STRICT_MODE` | `true` | Reject invalid webhook HMAC signatures with HTTP 400 |
-| `AUDIT_LOG_LEVEL` | `full` | Audit logging level (`full` or `decisions_only`) |
+### Dynamic Store Policies & Live Feature Flags
 
-### Transport Precedence
+Unlike static environment variables that require restarting Docker containers, AgenticCheckout features a **Dynamic Store Settings Engine** backed by the `store_settings` PostgreSQL table:
 
-```
---transport flag  >  MCP_TRANSPORT env var  >  default (streamablehttp)
-```
-
-| Transport | Endpoint | Recommended For |
-|-----------|----------|-----------------|
-| `streamablehttp` *(default)* | `POST http://localhost:8080/mcp` | Claude.ai, Cursor, remote agents |
-| `sse` | `http://localhost:8080/sse` | Older web-based MCP clients |
-| `stdio` | stdin/stdout (no HTTP) | Claude Desktop local install |
+- **Live Dashboard Control**: Click **"Store Policies"** in the top navigation bar of the Merchant Dashboard (`http://localhost:3000`) to toggle features and guardrails instantly.
+- **Immediate Propagation**: Changes take effect on the very next tool call without restarting Go or Docker containers.
+- **Configurable Policies**:
+  - `enable_find_and_price`: Enable/disable natural-language intent search & budget matching.
+  - `enable_negotiation`: Enable/disable autonomous bargaining and concession ladders.
+  - `enable_human_approval`: Require merchant manual approval for all discount concessions.
+  - `max_negotiation_attempts`: Set bargaining round limits before lockout (1, 2, 3, 5, 10).
+  - `max_tool_calls_per_minute`: Dynamic rate limit threshold per agent session.
+  - `webhook_strict_mode`: Enforce cryptographic HMAC-SHA256 signature verification.
 
 ---
 
