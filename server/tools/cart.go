@@ -17,6 +17,7 @@ import (
 	"github.com/sohampawar1866/merchant-mcp/server/db"
 	"github.com/sohampawar1866/merchant-mcp/server/pricing"
 	"github.com/sohampawar1866/merchant-mcp/server/razorpay"
+	"github.com/sohampawar1866/merchant-mcp/server/wallet"
 )
 
 // RegisterCartTools registers all multi-product cart and bundle tools to the MCP server.
@@ -355,7 +356,79 @@ func handleCheckoutCart(
 			return mcp.NewToolResultError("cart is empty or not found"), nil
 		}
 
-		// Create Razorpay payment link with cart total
+		paymentMethod := request.GetString("payment_method", "payment_link")
+		agentID := request.GetString("agent_id", "claude-buyer-01")
+
+		// 1. Dual-Path: Check if autonomous wallet settlement is requested
+		if paymentMethod == "autonomous_wallet" {
+			w, err := wallet.GetOrCreateWallet(ctx, pool, agentID)
+			if err == nil {
+				// Collect item categories
+				categories := make([]string, 0)
+				for _, it := range currentCart.Items {
+					var cat string
+					_ = pool.QueryRow(ctx, `SELECT category FROM products WHERE id = $1;`, it.ProductID).Scan(&cat)
+					if cat != "" {
+						categories = append(categories, cat)
+					}
+				}
+
+				check := w.CheckAllowance(currentCart.TotalPaise, categories)
+				if check.Allowed {
+					// Execute zero-click atomic debit
+					orderID := fmt.Sprintf("ord_auto_%s", uuid.New().String()[:12])
+					desc := fmt.Sprintf("Autonomous purchase (%d items) on %s", len(currentCart.Items), merchant.Name)
+					updatedWallet, debitErr := wallet.DebitWalletAtomic(ctx, pool, agentID, currentCart.TotalPaise, orderID, &cartID, desc)
+					if debitErr == nil {
+						// Record instant paid order
+						_, _ = pool.Exec(ctx, `
+							INSERT INTO orders (
+								merchant_id, razorpay_order_id, product_id, agreed_price, status, idempotency_key, payment_link, created_at, updated_at
+							) VALUES (
+								$1, $2, $3, $4, 'paid', $5, 'https://receipts.agenticcheckout.io/' || $2, NOW(), NOW()
+							);
+						`, merchant.ID, orderID, currentCart.Items[0].ProductID, currentCart.TotalPaise, idempotencyKey)
+
+						_, _ = pool.Exec(ctx, `UPDATE carts SET status = 'checked_out', idempotency_key = $1, updated_at = NOW() WHERE id = $2;`, idempotencyKey, cartID)
+
+						autoResp := map[string]any{
+							"order_id":               orderID,
+							"status":                 "paid",
+							"settlement_type":        "autonomous_wallet_zero_click",
+							"delegated_protocol":     "NPCI UPI Circle / AP2 Delegated Mandate",
+							"cart_id":                cartIDStr,
+							"total_paise":            currentCart.TotalPaise,
+							"total_inr":              fmt.Sprintf("₹%.2f", float64(currentCart.TotalPaise)/100.0),
+							"item_count":             len(currentCart.Items),
+							"remaining_balance_inr":  fmt.Sprintf("₹%.2f", float64(updatedWallet.BalancePaise)/100.0),
+							"receipt_url":            fmt.Sprintf("https://receipts.agenticcheckout.io/%s", orderID),
+							"message":                "Payment captured autonomously via pre-authorized agent allowance. No human action required.",
+						}
+
+						_ = auditLogger.Log(ctx, audit.Entry{
+							MerchantID:    merchant.ID,
+							CorrelationID: correlationID,
+							ToolName:      "checkout_cart_autonomous",
+							Input: map[string]any{
+								"cart_id":         cartIDStr,
+								"payment_method":  "autonomous_wallet",
+								"idempotency_key": idempotencyKey,
+							},
+							Decision:   "approved",
+							ReasonCode: "AUTONOMOUS_WALLET_DEBIT_CAPTURED",
+							Output:     autoResp,
+							DurationMs: time.Since(start).Milliseconds(),
+						})
+
+						respBytes, _ := json.Marshal(autoResp)
+						return mcp.NewToolResultText(string(respBytes)), nil
+					}
+				}
+			}
+			// If wallet allowance failed or exceeded cap, gracefully fall through to Razorpay 2FA Payment Link
+		}
+
+		// 2. Fallback / Standard Path: Create Razorpay payment link
 		customerPhone := request.GetString("customer_phone", "")
 		customerEmail := request.GetString("customer_email", "")
 
@@ -397,8 +470,10 @@ func handleCheckoutCart(
 			"status":          "created",
 			"cart_id":         cartIDStr,
 			"total_paise":     currentCart.TotalPaise,
+			"total_inr":       fmt.Sprintf("₹%.2f", float64(currentCart.TotalPaise)/100.0),
 			"item_count":      len(currentCart.Items),
 			"idempotency_key": idempotencyKey,
+			"settlement_type": "hitl_razorpay_payment_link_2fa",
 		}
 
 		_ = auditLogger.Log(ctx, audit.Entry{

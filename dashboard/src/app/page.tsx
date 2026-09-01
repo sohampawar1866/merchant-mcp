@@ -18,7 +18,10 @@ import { OverviewTab } from '@/components/OverviewTab';
 import { AuditTrailTab } from '@/components/AuditTrailTab';
 import { TransactionsTab } from '@/components/TransactionsTab';
 import { CatalogTab } from '@/components/CatalogTab';
+import { CampaignsTab } from '@/components/CampaignsTab';
+import { WalletTab } from '@/components/WalletTab';
 import { SettingsModal } from '@/components/SettingsModal';
+import { Sparkles, Wallet as WalletIcon } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // No-Merchant Error Screen
@@ -111,7 +114,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchant_id');
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'transactions' | 'catalog'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'transactions' | 'catalog' | 'campaigns' | 'wallets'>('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
   const [metricsError, setMetricsError] = useState('');
@@ -160,6 +163,8 @@ function DashboardContent() {
     { id: 'audit', label: 'Customer Activity', shortLabel: 'Activity', icon: Activity },
     { id: 'transactions', label: 'Orders & Payments', shortLabel: 'Orders', icon: CreditCard },
     { id: 'catalog', label: 'Catalog & Pricing', shortLabel: 'Catalog', icon: Package },
+    { id: 'campaigns', label: 'AI Growth & Campaigns', shortLabel: 'Campaigns', icon: Sparkles },
+    { id: 'wallets', label: 'Autonomous Wallets', shortLabel: 'Wallets', icon: WalletIcon },
   ];
 
   const merchantName = metrics?.merchant?.name || '';
@@ -277,6 +282,8 @@ function DashboardContent() {
         {activeTab === 'audit' && <AuditTrailTab merchantId={merchantId} />}
         {activeTab === 'transactions' && <TransactionsTab merchantId={merchantId} />}
         {activeTab === 'catalog' && <CatalogTab merchantId={merchantId} />}
+        {activeTab === 'campaigns' && <CampaignsTab merchantId={merchantId} />}
+        {activeTab === 'wallets' && <WalletTab merchantId={merchantId} />}
       </main>
 
       {/* Live Store Guardrails & Settings Modal */}

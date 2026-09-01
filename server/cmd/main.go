@@ -100,6 +100,14 @@ func main() {
 	tools.RegisterCartTools(s, pool, rzpClient, auditLogger, cfg)
 	log.Println("Feature: create_cart, add_to_cart, view_cart, negotiate_cart_bundle, checkout_cart registered")
 
+	// Register AI Growth Upsell Engine
+	tools.RegisterBundleTools(s, pool, auditLogger, cfg)
+	log.Println("Feature: get_upsell_bundle tool registered (AI Growth & Upsell Engine)")
+
+	// Register Autonomous Agent Wallet (NPCI UPI Circle / AP2 Delegated Mandates)
+	tools.RegisterWalletTools(s, pool, auditLogger, cfg)
+	log.Println("Feature: get_agent_wallet_balance tool registered (Autonomous Mandates & Ledger)")
+
 	// In stdio mode, launch a lightweight background HTTP server on cfg.Port for Razorpay webhooks
 	if cfg.MCPTransport == "stdio" {
 		go func() {
@@ -123,9 +131,19 @@ func main() {
 		}
 
 	case "streamablehttp":
-		log.Printf("Starting MCP StreamableHTTP server on :%s", cfg.Port)
-		httpServer := server.NewStreamableHTTPServer(s)
-		if err := httpServer.Start(":" + cfg.Port); err != nil {
+		log.Printf("Starting MCP StreamableHTTP server with Open Agent Manifest on :%s", cfg.Port)
+		mcpHandler := server.NewStreamableHTTPServer(s)
+
+		mux := http.NewServeMux()
+		mux.Handle("/mcp", mcpHandler)
+		mux.Handle("/webhook/razorpay", webhookReceiver)
+		mux.HandleFunc("/.well-known/agent-manifest.json", handleAgentManifest)
+		mux.HandleFunc("/.well-known/mcp.json", handleMCPManifest)
+
+		serverAddr := ":" + cfg.Port
+		log.Printf("MCP Gateway ready at http://localhost%s/mcp", serverAddr)
+		log.Printf("Open Agent Manifest ready at http://localhost%s/.well-known/agent-manifest.json", serverAddr)
+		if err := http.ListenAndServe(serverAddr, mux); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("StreamableHTTP Server error: %v", err)
 		}
 
