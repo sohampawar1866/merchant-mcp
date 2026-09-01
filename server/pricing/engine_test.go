@@ -179,3 +179,64 @@ func TestEvaluateOffer_RequireHumanReview(t *testing.T) {
 		t.Fatalf("expected pending_approval when RequireHumanReview is true, got %+v", res)
 	}
 }
+
+func TestEvaluateBundleOffer_MultiItem(t *testing.T) {
+	// Item 1: Laptop Stand (Base: ₹899 = 89900 paise, Floor: ₹750 = 75000 paise, Qty: 1)
+	// Item 2: Desk Mat (Base: ₹1,199 = 119900 paise, Floor: ₹900 = 90000 paise, Qty: 1)
+	// Total Base = 209800 paise (₹2,098.00)
+	// Total Floor = 165000 paise (₹1,650.00)
+	items := []BundleItemInput{
+		{ID: "prod_laptop_stand", BasePrice: 89900, FloorPrice: 75000, Quantity: 1},
+		{ID: "prod_desk_mat", BasePrice: 119900, FloorPrice: 90000, Quantity: 1},
+	}
+
+	// 1. Proposed ₹2,098 (Full price)
+	res1 := EvaluateBundleOffer(BundleEvaluationInput{
+		Items:              items,
+		ProposedTotalPrice: 209800,
+		AttemptNumber:      1,
+		MaxAttempts:        3,
+	})
+	if res1.Decision != "approved" || res1.ReasonCode != "ACCEPTED_BASE_OR_HIGHER" {
+		t.Fatalf("expected approved base price, got %+v", res1)
+	}
+
+	// 2. Proposed ₹1,800 (Within allowable bounds: ₹1,650 to ₹2,098)
+	res2 := EvaluateBundleOffer(BundleEvaluationInput{
+		Items:              items,
+		ProposedTotalPrice: 180000,
+		AttemptNumber:      1,
+		MaxAttempts:        3,
+	})
+	if res2.Decision != "approved" || res2.ReasonCode != "WITHIN_BOUNDS" || res2.FinalTotalPrice != 180000 {
+		t.Fatalf("expected approved bundle discount, got %+v", res2)
+	}
+	if len(res2.Allocations) != 2 {
+		t.Fatalf("expected 2 allocations, got %d", len(res2.Allocations))
+	}
+	// Verify neither item went below floor
+	for _, alloc := range res2.Allocations {
+		if alloc.ID == "prod_laptop_stand" && alloc.UnitAgreedPrice < 75000 {
+			t.Fatalf("laptop stand violated floor: %d", alloc.UnitAgreedPrice)
+		}
+		if alloc.ID == "prod_desk_mat" && alloc.UnitAgreedPrice < 90000 {
+			t.Fatalf("desk mat violated floor: %d", alloc.UnitAgreedPrice)
+		}
+	}
+
+	// 3. Proposed ₹1,200 (Below floor ₹1,650) -> Concession Ladder
+	res3 := EvaluateBundleOffer(BundleEvaluationInput{
+		Items:              items,
+		ProposedTotalPrice: 120000,
+		AttemptNumber:      1,
+		MaxAttempts:        3,
+	})
+	if res3.Decision != "rejected" || res3.ReasonCode != "BELOW_FLOOR" {
+		t.Fatalf("expected below floor rejection, got %+v", res3)
+	}
+	// Attempt 1 counter-offer should concede 33% of (209800 - 165000 = 44800) -> counter = 209800 - 14784 = 195016
+	if res3.CounterOfferPrice <= 165000 || res3.CounterOfferPrice >= 209800 {
+		t.Fatalf("unexpected counter offer: %d", res3.CounterOfferPrice)
+	}
+}
+

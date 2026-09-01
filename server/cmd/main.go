@@ -96,6 +96,10 @@ func main() {
 	tools.RegisterCheckoutTools(s, pool, rzpClient, redisCache, auditLogger, cfg)
 	log.Println("Feature: create_checkout & check_order_status tools registered (multi-tenant enabled)")
 
+	// Register Multi-Product Cart & Bundle Tools
+	tools.RegisterCartTools(s, pool, rzpClient, auditLogger, cfg)
+	log.Println("Feature: create_cart, add_to_cart, view_cart, negotiate_cart_bundle, checkout_cart registered")
+
 	// In stdio mode, launch a lightweight background HTTP server on cfg.Port for Razorpay webhooks
 	if cfg.MCPTransport == "stdio" {
 		go func() {
