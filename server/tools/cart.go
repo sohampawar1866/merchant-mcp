@@ -252,8 +252,11 @@ func handleNegotiateCartBundle(pool *pgxpool.Pool, auditLogger *audit.Logger, cf
 		}
 		cartID, _ := uuid.Parse(cartIDStr)
 
-		proposedBundlePrice, err := request.RequireInt("proposed_bundle_price")
-		if err != nil {
+		proposedBundlePrice := request.GetInt("proposed_bundle_price", 0)
+		if proposedBundlePrice == 0 {
+			proposedBundlePrice = request.GetInt("proposed_bundle_price_paise", 0)
+		}
+		if proposedBundlePrice <= 0 {
 			return mcp.NewToolResultError("missing required parameter: proposed_bundle_price (must be integer paise)"), nil
 		}
 
@@ -432,6 +435,8 @@ func handleCheckoutCart(
 		customerPhone := request.GetString("customer_phone", "")
 		customerEmail := request.GetString("customer_email", "")
 
+		deliveryMode := db.GetMerchantSettingString(ctx, pool, merchant.ID, "checkout_delivery_mode", "standard_link")
+		upiLink := (deliveryMode == "upi_link")
 		itemDesc := fmt.Sprintf("Multi-item cart purchase (%d items) from %s", len(currentCart.Items), merchant.Name)
 
 		linkReq := razorpay.CreatePaymentLinkRequest{
@@ -440,7 +445,7 @@ func handleCheckoutCart(
 			Description:   itemDesc,
 			CustomerPhone: customerPhone,
 			CustomerEmail: customerEmail,
-			UPILink:       true,
+			UPILink:       upiLink,
 		}
 
 		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, linkReq, merchant.RazorpayKeyID, merchant.RazorpayKeySecret)

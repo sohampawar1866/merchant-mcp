@@ -31,6 +31,7 @@ func TestNegotiate_DeliberateFailureCase_BelowFloor(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	_ = os.Setenv("MERCHANT_API_KEY", "demo-key-1")
 	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
 	handler := handleNegotiateOffer(pool, auditLogger, cfg)
@@ -102,6 +103,7 @@ func TestNegotiate_StepLadder_And_Lockout(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	_ = os.Setenv("MERCHANT_API_KEY", "demo-key-1")
 	cfg := config.Load()
 	cfg.MaxNegotiationAttempts = 3
 	auditLogger := audit.NewLogger(pool, "full")
@@ -181,6 +183,7 @@ func TestNegotiate_ApprovedWithinBounds(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	_ = os.Setenv("MERCHANT_API_KEY", "demo-key-1")
 	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
 	handler := handleNegotiateOffer(pool, auditLogger, cfg)

@@ -50,6 +50,7 @@ func TestFindAndPrice_ZeroLeakageAndResults(t *testing.T) {
 	_ = db.RunMigrations(ctx, pool)
 	_ = db.AutoSeed(ctx, pool, "../../data/catalog.seed.json")
 
+	_ = os.Setenv("MERCHANT_API_KEY", "demo-key-1")
 	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
 	handler := handleFindAndPrice(pool, auditLogger, cfg)

@@ -101,7 +101,7 @@ func GetMerchantByID(ctx context.Context, pool *pgxpool.Pool, id, passphrase str
 			api_key, 
 			created_at
 		FROM merchants
-		WHERE id = $2 OR id::text = $2;
+		WHERE id::text = $2;
 	`
 
 	var m Merchant
@@ -179,7 +179,7 @@ func UpdateMerchantStatus(ctx context.Context, pool *pgxpool.Pool, merchantID, s
 		return fmt.Errorf("db: database pool is nil")
 	}
 
-	res, err := pool.Exec(ctx, `UPDATE merchants SET status = $1 WHERE id = $2 OR id::text = $2;`, status, merchantID)
+	res, err := pool.Exec(ctx, `UPDATE merchants SET status = $1 WHERE id::text = $2;`, status, merchantID)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func UpdateMerchantFeatureOverrides(ctx context.Context, pool *pgxpool.Pool, mer
 		overridesJSON = []byte("{}")
 	}
 
-	_, err = pool.Exec(ctx, `UPDATE merchants SET feature_overrides = $1::jsonb WHERE id = $2 OR id::text = $2;`, string(overridesJSON), merchantID)
+	_, err = pool.Exec(ctx, `UPDATE merchants SET feature_overrides = $1::jsonb WHERE id::text = $2;`, string(overridesJSON), merchantID)
 	return err
 }
 
