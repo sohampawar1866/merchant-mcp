@@ -156,6 +156,66 @@ func (a *App) OpenInstallPage() {
 	openBrowser(url)
 }
 
+// SavedEnv represents persisted credentials and port configurations from .env
+type SavedEnv struct {
+	KeyID         string `json:"keyId"`
+	KeySecret     string `json:"keySecret"`
+	WebhookSecret string `json:"webhookSecret"`
+	Transport     string `json:"transport"`
+	Port          string `json:"port"`
+}
+
+// GetSavedEnv reads existing credentials and port settings from .env in the project root
+func (a *App) GetSavedEnv() SavedEnv {
+	envPath := filepath.Join(a.projectRoot, ".env")
+	file, err := os.Open(envPath)
+	if err != nil {
+		return SavedEnv{
+			Port:      "8080",
+			Transport: "streamablehttp",
+		}
+	}
+	defer file.Close()
+
+	res := SavedEnv{
+		Port:      "8080",
+		Transport: "streamablehttp",
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		k := strings.TrimSpace(parts[0])
+		v := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
+
+		switch k {
+		case "RAZORPAY_KEY_ID":
+			res.KeyID = v
+		case "RAZORPAY_KEY_SECRET":
+			res.KeySecret = v
+		case "RAZORPAY_WEBHOOK_SECRET":
+			res.WebhookSecret = v
+		case "MCP_TRANSPORT":
+			if v != "" {
+				res.Transport = v
+			}
+		case "PORT":
+			if v != "" {
+				res.Port = v
+			}
+		}
+	}
+
+	return res
+}
+
 // OpenRazorpayDashboard opens the Razorpay test dashboard
 func (a *App) OpenRazorpayDashboard() {
 	openBrowser("https://dashboard.razorpay.com/app/keys")
@@ -173,6 +233,22 @@ func (a *App) WriteEnvAndLaunch(keyID, keySecret, webhookSecret, transport, port
 	}
 	if port == "" {
 		port = "8080"
+	}
+
+	// Persist to .env in projectRoot so future runs remember these settings
+	envPath := filepath.Join(a.projectRoot, ".env")
+	envContent := fmt.Sprintf(`# Auto-configured by AgenticCheckout Desktop Installer
+RAZORPAY_KEY_ID=%s
+RAZORPAY_KEY_SECRET=%s
+RAZORPAY_WEBHOOK_SECRET=%s
+MCP_TRANSPORT=%s
+PORT=%s
+`, keyID, keySecret, webhookSecret, transport, port)
+
+	if err := os.WriteFile(envPath, []byte(envContent), 0644); err != nil {
+		wailsRuntime.EventsEmit(a.ctx, "log", fmt.Sprintf("⚠️ Could not write .env: %v (continuing)", err))
+	} else {
+		wailsRuntime.EventsEmit(a.ctx, "log", "✓ Saved configuration to .env")
 	}
 
 	wailsRuntime.EventsEmit(a.ctx, "log", "✓ Configuring store credentials & launching containers...")

@@ -174,8 +174,37 @@ startBtn.addEventListener('click', async () => {
   }
 });
 
+// Pre-fill from saved .env
+async function loadSavedEnv() {
+  if (window.go?.main?.App?.GetSavedEnv) {
+    try {
+      const env = await window.go.main.App.GetSavedEnv();
+      if (env) {
+        if (env.keyId) keyIdInput.value = env.keyId;
+        if (env.keySecret) keySecretInput.value = env.keySecret;
+        if (env.webhookSecret) webhookSecretInput.value = env.webhookSecret;
+        if (env.port) portInput.value = env.port;
+        if (env.transport) {
+          const radio = document.querySelector(`.transport-pill input[value="${env.transport}"]`);
+          if (radio) {
+            document.querySelectorAll('.transport-pill').forEach((p) => p.classList.remove('active'));
+            radio.closest('.transport-pill')?.classList.add('active');
+            radio.checked = true;
+          }
+        }
+        updateButtonState();
+      }
+    } catch (e) {
+      console.warn('Could not load saved env:', e);
+    }
+  }
+}
+
 // Wails Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
+  // Pre-load saved configuration from .env
+  loadSavedEnv();
+
   // Listen for real-time live log streams from Go
   if (window.runtime?.EventsOn) {
     window.runtime.EventsOn('log', (msg) => {
