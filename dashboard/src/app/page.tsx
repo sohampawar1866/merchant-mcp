@@ -170,27 +170,27 @@ function DashboardContent() {
   const merchantName = metrics?.merchant?.name || '';
 
   return (
-    <div className="min-h-screen flex flex-col bg-figma-canvas text-figma-ink pb-16 lg:pb-0">
+    <div className="min-h-screen flex flex-col bg-figma-canvas text-figma-ink pb-16 lg:pb-0 w-full overflow-x-hidden">
       {/* Pinned Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-figma-canvas border-b border-figma-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 bg-figma-canvas border-b border-figma-hairline w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
           {/* Brand Wordmark & Glyph */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-figma-primary text-white flex items-center justify-center p-1.5 select-none">
               <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain filter invert brightness-0" />
             </div>
             <div>
-              <h1 className="font-sans text-base font-semibold text-figma-ink tracking-tight">
+              <h1 className="font-sans text-sm sm:text-base font-semibold text-figma-ink tracking-tight truncate max-w-[140px] sm:max-w-[200px]">
                 AgenticCheckout
                 {merchantName && (
-                  <span className="text-zinc-400 font-normal"> / {merchantName}</span>
+                  <span className="text-zinc-400 font-normal hidden sm:inline"> / {merchantName}</span>
                 )}
               </h1>
             </div>
           </div>
 
           {/* Desktop Nav-Pill-Group (>= 1024px) */}
-          <nav className="hidden lg:flex items-center gap-1.5 p-1 rounded-full bg-figma-surfaceSoft border border-figma-hairline">
+          <nav className="hidden xl:flex items-center gap-1 p-1 rounded-full bg-figma-surfaceSoft border border-figma-hairline shrink-0">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -198,54 +198,54 @@ function DashboardContent() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id as any)}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm transition duration-150 whitespace-nowrap font-medium ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition duration-150 whitespace-nowrap font-medium ${
                     isActive
                       ? 'bg-figma-primary text-figma-onPrimary shadow-xs'
                       : 'text-figma-ink hover:bg-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{item.shortLabel}</span>
                 </button>
               );
             })}
           </nav>
 
           {/* Right Actions & Status */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-figma-lime text-figma-ink border border-black/15 text-xs font-mono tracking-wider uppercase font-bold select-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-figma-lime text-figma-ink border border-black/15 text-[11px] font-mono tracking-wider uppercase font-bold select-none">
               <Zap className="w-3 h-3 fill-figma-ink" />
-              <span>AGENTIC STORE ONLINE</span>
+              <span>ONLINE</span>
             </div>
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="px-3 py-1.5 rounded-full bg-figma-surfaceSoft hover:bg-zinc-100 text-figma-ink flex items-center gap-1.5 transition border border-figma-hairline text-xs font-mono font-bold tracking-wider uppercase"
+              className="px-2.5 sm:px-3 py-1.5 rounded-full bg-figma-surfaceSoft hover:bg-zinc-100 text-figma-ink flex items-center gap-1.5 transition border border-figma-hairline text-xs font-mono font-bold tracking-wider uppercase"
               title="Configure store guardrails & feature flags live"
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Store Policies</span>
+              <span className="hidden sm:inline">Policies</span>
             </button>
 
             <button
               onClick={fetchMetrics}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-figma-surfaceSoft hover:bg-figma-hairline text-figma-ink flex items-center justify-center transition border border-figma-hairline"
+              className="w-8 h-8 rounded-full bg-figma-surfaceSoft hover:bg-figma-hairline text-figma-ink flex items-center justify-center transition border border-figma-hairline"
               title="Refresh store metrics"
             >
-              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
         {/* Figma Marquee Strip */}
-        <div className="bg-figma-inverseCanvas text-figma-inverseInk h-7 px-4 sm:px-6 flex items-center justify-between text-[11px] font-mono tracking-wider uppercase select-none">
-          <span className="truncate">Autonomous AI Storefront • Protected Floor Pricing • Instant Razorpay Webhook</span>
-          <span className="hidden sm:inline-block text-[10px] text-zinc-400">ENGINE v1.0.0</span>
+        <div className="bg-figma-inverseCanvas text-figma-inverseInk h-7 px-3 sm:px-6 flex items-center justify-between text-[11px] font-mono tracking-wider uppercase select-none w-full overflow-hidden">
+          <span className="truncate text-[10px] sm:text-[11px]">Autonomous AI Storefront • Protected Floor Pricing • Instant Razorpay Webhooks</span>
+          <span className="hidden md:inline-block text-[10px] text-zinc-400 shrink-0">ENGINE v1.0.0</span>
         </div>
 
-        {/* Mobile & Tablet 4-Column Tab Bar */}
-        <div className="lg:hidden border-t border-figma-hairline bg-figma-canvas px-2 py-1.5">
-          <nav className="grid grid-cols-4 gap-1">
+        {/* Mobile & Tablet 6-Column Tab Bar */}
+        <div className="xl:hidden border-t border-figma-hairline bg-figma-canvas px-1.5 py-1 w-full overflow-x-auto no-scrollbar">
+          <nav className="flex items-center gap-1 min-w-max sm:grid sm:grid-cols-6 sm:min-w-0">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -253,14 +253,14 @@ function DashboardContent() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id as any)}
-                  className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-full text-xs transition ${
+                  className={`flex flex-col sm:flex-row items-center justify-center py-1.5 px-2 sm:px-1 rounded-full text-xs transition ${
                     isActive
                       ? 'bg-figma-primary text-figma-onPrimary font-medium'
                       : 'text-figma-ink hover:bg-figma-surfaceSoft'
                   }`}
                 >
-                  <Icon className="w-4 h-4 mb-0.5" />
-                  <span className="text-[11px] leading-tight truncate">{item.shortLabel}</span>
+                  <Icon className="w-3.5 h-3.5 sm:mr-1 mb-0.5 sm:mb-0" />
+                  <span className="text-[10px] sm:text-[11px] leading-tight truncate">{item.shortLabel}</span>
                 </button>
               );
             })}
@@ -269,7 +269,7 @@ function DashboardContent() {
       </header>
 
       {/* Main Content Floor */}
-      <main className="flex-1 p-3 sm:p-5 md:p-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-3 sm:p-5 md:p-6 max-w-7xl w-full mx-auto overflow-x-hidden">
         {activeTab === 'overview' && (
           <OverviewTab
             merchantId={merchantId}
