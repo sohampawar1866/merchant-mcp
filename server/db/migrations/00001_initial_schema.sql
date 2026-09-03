@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS merchants (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_merchants_api_key ON merchants(api_key);
+CREATE INDEX IF NOT EXISTS idx_merchants_status ON merchants(status);
+
 -- Seed Default Platform Merchants (Idempotent)
 INSERT INTO merchants (id, name, razorpay_key_id, razorpay_key_secret_enc, webhook_secret_enc, status, api_key)
 VALUES 
@@ -94,22 +97,24 @@ CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_product_id ON orders(product_id);
 CREATE INDEX IF NOT EXISTS idx_orders_merchant_status ON orders(merchant_id, status);
 
--- 5. Negotiations Table (Dynamic Real-Time Discount Engine)
+-- 5. Negotiations Table (Dynamic Real-Time Pricing Engine Records)
 CREATE TABLE IF NOT EXISTS negotiations (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    merchant_id   UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
-    session_id    TEXT UNIQUE NOT NULL,
-    product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    current_offer INTEGER NOT NULL CHECK (current_offer >= 0),
-    round         INTEGER NOT NULL DEFAULT 1 CHECK (round >= 1),
-    status        TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'accepted', 'rejected', 'expired')),
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id      UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    product_id       UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    agent_session_id TEXT,
+    proposed_price   INTEGER NOT NULL,
+    decision         TEXT NOT NULL CHECK (decision IN ('approved', 'rejected')),
+    reason_code      TEXT,
+    counter_offer    INTEGER,
+    attempt_number   INTEGER NOT NULL DEFAULT 1,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Performance Indexes for Negotiations
 CREATE INDEX IF NOT EXISTS idx_negotiations_merchant_id ON negotiations(merchant_id);
-CREATE INDEX IF NOT EXISTS idx_negotiations_session_id ON negotiations(session_id);
+CREATE INDEX IF NOT EXISTS idx_negotiations_product_id ON negotiations(product_id);
+CREATE INDEX IF NOT EXISTS idx_negotiations_agent_session ON negotiations(agent_session_id);
 
 -- 6. Audit Log Table (Immutable Decision Log & Telemetry)
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -157,43 +162,63 @@ VALUES
     ('efe794fa-e1e2-4d30-8f13-cb74b2b5f110', 'checkout_delivery_mode', '"standard_link"', 'Delivery mode for Soham Store')
 ON CONFLICT (merchant_id, key) DO NOTHING;
 
--- 8. Unified Carts Table (Atomic Multi-Item Sessions)
+-- 8. Merchant Campaigns Table (Targeted AI Upsell Bundles)
+CREATE TABLE IF NOT EXISTS merchant_campaigns (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id      UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    name             VARCHAR(255) NOT NULL,
+    discount_percent INTEGER NOT NULL CHECK (discount_percent > 0 AND discount_percent <= 50),
+    target_category  VARCHAR(100),
+    min_bundle_items INTEGER NOT NULL DEFAULT 2,
+    status           VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'expired')),
+    starts_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ends_at          TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days'),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_merchant_campaigns ON merchant_campaigns(merchant_id, status);
+
+-- 9. Unified Carts Table (Atomic Multi-Item Sessions)
 CREATE TABLE IF NOT EXISTS carts (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    merchant_id    UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
-    session_id     VARCHAR(255) NOT NULL,
-    currency       VARCHAR(10) NOT NULL DEFAULT 'INR',
-    subtotal_paise INT NOT NULL DEFAULT 0,
-    discount_paise INT NOT NULL DEFAULT 0,
-    tax_paise      INT NOT NULL DEFAULT 0,
-    total_paise    INT NOT NULL DEFAULT 0,
-    status         VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'checked_out', 'abandoned', 'expired')),
-    expires_at     TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id       UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    agent_session_id  VARCHAR(255) NOT NULL,
+    customer_id       VARCHAR(255),
+    status            VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'negotiating', 'locked', 'checked_out', 'expired')),
+    currency          VARCHAR(10) NOT NULL DEFAULT 'INR',
+    subtotal_paise    INTEGER NOT NULL DEFAULT 0,
+    tax_paise         INTEGER NOT NULL DEFAULT 0,
+    discount_paise    INTEGER NOT NULL DEFAULT 0,
+    total_paise       INTEGER NOT NULL DEFAULT 0,
+    negotiated_bundle BOOLEAN NOT NULL DEFAULT false,
+    idempotency_key   VARCHAR(255) UNIQUE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at        TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
 );
 
 -- Performance Indexes for Carts
-CREATE INDEX IF NOT EXISTS idx_carts_merchant_session ON carts(merchant_id, session_id);
+CREATE INDEX IF NOT EXISTS idx_carts_session ON carts(merchant_id, agent_session_id, status);
 
--- 9. Cart Items Table (Itemized Line Items with 18% GST)
+-- 10. Cart Items Table (Itemized Line Items with 18% GST)
 CREATE TABLE IF NOT EXISTS cart_items (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cart_id                 UUID NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     product_id              UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    quantity                INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
-    unit_base_price_paise   INT NOT NULL CHECK (unit_base_price_paise >= 0),
-    unit_agreed_price_paise INT NOT NULL CHECK (unit_agreed_price_paise >= 0),
-    tax_rate_bps            INT NOT NULL DEFAULT 1800, -- 18.00% GST
-    tax_amount_paise        INT NOT NULL DEFAULT 0,
-    line_total_paise        INT NOT NULL CHECK (line_total_paise >= 0),
+    merchant_id             UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    quantity                INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    unit_base_price_paise   INTEGER NOT NULL CHECK (unit_base_price_paise >= 0),
+    unit_agreed_price_paise INTEGER NOT NULL CHECK (unit_agreed_price_paise >= 0),
+    tax_rate_bps            INTEGER NOT NULL DEFAULT 1800, -- 18.00% GST
+    tax_amount_paise        INTEGER NOT NULL DEFAULT 0,
+    line_total_paise        INTEGER NOT NULL CHECK (line_total_paise >= 0),
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Performance Indexes for Cart Items
-CREATE INDEX IF NOT EXISTS idx_cart_items_cart_id ON cart_items(cart_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
 
--- 10. Autonomous Agent Wallets Table (NPCI UPI Circle / AP2 Delegated Mandates)
+-- 11. Autonomous Agent Wallets Table (NPCI UPI Circle / AP2 Delegated Mandates)
 CREATE TABLE IF NOT EXISTS agent_wallets (
     id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id                  VARCHAR(255) NOT NULL UNIQUE, -- e.g. "claude-buyer-01"
@@ -201,7 +226,7 @@ CREATE TABLE IF NOT EXISTS agent_wallets (
     balance_paise             BIGINT NOT NULL DEFAULT 500000 CHECK (balance_paise >= 0), -- Default ₹5,000 allowance
     monthly_allowance_paise   BIGINT NOT NULL DEFAULT 1500000, -- ₹15,000 max monthly
     monthly_spent_paise       BIGINT NOT NULL DEFAULT 0,
-    per_transaction_cap_paise INT NOT NULL DEFAULT 200000, -- ₹2,000 per txn auto-approval cap
+    per_transaction_cap_paise INTEGER NOT NULL DEFAULT 200000, -- ₹2,000 per txn auto-approval cap
     whitelisted_categories    TEXT[] DEFAULT ARRAY['Audio', 'Desk Accessories', 'Smart Home', 'Wearables', 'general'],
     last_reset_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status                    VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'frozen', 'revoked')),
@@ -209,7 +234,7 @@ CREATE TABLE IF NOT EXISTS agent_wallets (
 );
 
 -- Performance Indexes for Agent Wallets
-CREATE INDEX IF NOT EXISTS idx_agent_wallets_agent_id ON agent_wallets(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_wallets_agent ON agent_wallets(agent_id, status);
 
 -- Seed Primary Agent Wallet (Idempotent)
 INSERT INTO agent_wallets (agent_id, user_id, balance_paise, monthly_allowance_paise, per_transaction_cap_paise, status)
@@ -217,22 +242,21 @@ VALUES
     ('claude-buyer-01', 'user-soham-01', 500000, 1500000, 200000, 'active')
 ON CONFLICT (agent_id) DO NOTHING;
 
--- 11. Agent Double-Entry Wallet Ledger Table
+-- 12. Agent Double-Entry Wallet Ledger Table
 CREATE TABLE IF NOT EXISTS agent_wallet_ledger (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id           UUID NOT NULL REFERENCES agent_wallets(id) ON DELETE CASCADE,
     order_id            VARCHAR(255),
     cart_id             UUID REFERENCES carts(id) ON DELETE SET NULL,
     entry_type          VARCHAR(50) NOT NULL CHECK (entry_type IN ('CREDIT_ALLOWANCE', 'DEBIT_PURCHASE', 'REFUND_CREDIT')),
-    amount_paise        INT NOT NULL,
+    amount_paise        INTEGER NOT NULL,
     balance_after_paise BIGINT NOT NULL,
     description         TEXT,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Performance Indexes for Wallet Ledger
-CREATE INDEX IF NOT EXISTS idx_wallet_ledger_wallet_id ON agent_wallet_ledger(wallet_id);
-CREATE INDEX IF NOT EXISTS idx_wallet_ledger_created_at ON agent_wallet_ledger(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_ledger_wallet ON agent_wallet_ledger(wallet_id, created_at DESC);
 
 -- +goose StatementEnd
 
@@ -242,6 +266,7 @@ DROP TABLE IF EXISTS agent_wallet_ledger CASCADE;
 DROP TABLE IF EXISTS agent_wallets CASCADE;
 DROP TABLE IF EXISTS cart_items CASCADE;
 DROP TABLE IF EXISTS carts CASCADE;
+DROP TABLE IF EXISTS merchant_campaigns CASCADE;
 DROP TABLE IF EXISTS store_settings CASCADE;
 DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS negotiations CASCADE;
