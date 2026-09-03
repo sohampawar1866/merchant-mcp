@@ -25,7 +25,7 @@ const PRODUCTS = [
     pricePaise: 89900,
     rating: 4.9,
     badge: 'Bestseller',
-    image: '💻',
+    image: '/products/laptop-stand.jpg',
     description: 'Aircraft-grade ergonomic aluminum riser with anti-slip silicone cushions.',
     tags: ['ergonomic', 'aluminum', 'workspace', 'productivity'],
   },
@@ -37,7 +37,7 @@ const PRODUCTS = [
     pricePaise: 119900,
     rating: 4.8,
     badge: 'Popular Combo',
-    image: '🌈',
+    image: '/products/desk-mat.jpg',
     description: 'Extra-large waterproof micro-woven desk pad with 14 chroma RGB lighting modes.',
     tags: ['rgb', 'desk mat', 'gaming', 'waterproof'],
   },
@@ -49,7 +49,7 @@ const PRODUCTS = [
     pricePaise: 179900,
     rating: 4.7,
     badge: 'ANC Enabled',
-    image: '🎧',
+    image: '/products/earbuds.jpg',
     description: 'Active Noise Cancelling true wireless earbuds with 32hr battery life.',
     tags: ['audio', 'anc', 'bluetooth', 'earbuds'],
   },
@@ -61,7 +61,7 @@ const PRODUCTS = [
     pricePaise: 1299900,
     rating: 5.0,
     badge: 'Flagship',
-    image: '📽️',
+    image: '/products/projector.jpg',
     description: 'Ultra-compact 4K HDR home theater projector with Android TV & Auto-Keystone.',
     tags: ['projector', '4k', 'cinema', 'smart home'],
   },
@@ -217,10 +217,14 @@ export default function StorefrontPage() {
               className="bg-white rounded-[24px] border border-zinc-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-200 p-5 flex flex-col justify-between space-y-4"
             >
               <div className="space-y-3">
-                {/* Image / Icon container */}
-                <div className="h-40 rounded-2xl bg-zinc-100 flex items-center justify-center text-5xl relative overflow-hidden">
-                  <span>{product.image}</span>
-                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-bold text-zinc-800 shadow-xs uppercase tracking-wider font-mono">
+                {/* Product Image Container */}
+                <div className="h-44 rounded-2xl bg-zinc-100 flex items-center justify-center relative overflow-hidden group">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-bold text-white shadow-xs uppercase tracking-wider font-mono">
                     {product.badge}
                   </span>
                 </div>
