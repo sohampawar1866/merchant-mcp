@@ -4,9 +4,12 @@
 *.exe
 *.out
 
-# Environment
+# Environment (Never commit real .env files to git)
 .env
+.env.*
 .env.local
+*.env
+!.env.example
 
 # IDE
 .idea/
@@ -33,6 +36,13 @@ admin-dashboard/node_modules/
 admin-dashboard/.next/
 admin-dashboard/out/
 admin-dashboard/dist/
+customer-upi-app/node_modules/
+customer-upi-app/.next/
+customer-upi-app/out/
+customer-upi-app/dist/
+installer/frontend/node_modules/
+installer/frontend/dist/
+installer/build/bin/
 node_modules/
 # Planning & GSD
 .planning/

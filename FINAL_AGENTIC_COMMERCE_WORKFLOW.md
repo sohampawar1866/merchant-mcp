@@ -24,11 +24,12 @@ The architecture is strictly separated into three decoupled components:
 │                        1. CUSTOMER APPS & AGENT RUNTIMES                               │
 │                                                                                        │
 │  [ Customer UPI Circle App Simulator ]           [ Autonomous Buyer AI Agent ]         │
-│  • Route: /upi-circle (Phone Mockup)             • Claude / ChatGPT (Unified MCP SSE)  │
-│  • Account: Soham Pawar (State Bank of India)    • Connects ONCE to Gateway            │
-│  • Delegated Agent: claude-buyer-01              • Searches, builds carts, negotiates  │
-│  • Monthly Allowance: ₹15,000                    • Autonomous Fast-Path or Escalates   │
-│  • Interactive Cap Slider: [ ₹2,000 ]              to Razorpay Step-Up 2FA             │
+│  • Standalone Container (:3002)                  • Claude / ChatGPT (Unified MCP SSE)  │
+│  • Folder: /customer-upi-app/                    • Connects ONCE to Gateway            │
+│  • Account: Soham Pawar (State Bank of India)    • Searches, builds carts, negotiates  │
+│  • Delegated Agent: claude-buyer-01              • Autonomous Fast-Path or Escalates   │
+│  • Monthly Allowance: ₹15,000                    • to Razorpay Step-Up 2FA             │
+│  • Interactive Cap Slider: [ ₹2,000 ]                                                  │
 └───────────────────────────┬───────────────────────────────────┬────────────────────────┘
                             │                                   │
                 Delegates spending bounds           Executes MCP Tool Calls
@@ -83,8 +84,8 @@ The architecture is strictly separated into three decoupled components:
 * Sets public MRPs and **Private Secret Floor Prices** (e.g. Laptop Stand = ₹899 MRP, ₹750 Floor).
 * Configures **AI Growth Campaigns** (e.g. *Power Duo*: 15% off combo bundle).
 
-#### 2. Customer UPI Circle Delegation (`http://localhost:3000/upi-circle`)
-* Customer opens the **Customer UPI Circle Simulator** (styled like Google Pay / PhonePe).
+#### 2. Customer UPI Circle Delegation (`http://localhost:3002`)
+* Customer opens the **Customer UPI Circle Simulator** (styled like Google Pay / PhonePe smartphone mockup).
 * Selects **"Delegate AI Agent"** and assigns `claude-buyer-01`.
 * Sets **Monthly Budget**: ₹15,000.
 * Sets **Zero-Click Auto-Debit Cap**: ₹2,000 (purchases under this amount do not require an MPIN).
@@ -146,30 +147,27 @@ The architecture is strictly separated into three decoupled components:
 
 ## 5. Codebase Inventory: Clean & Production-Ready
 
-Following our architecture cleanup, all redundant files (`store-site/`, `cat.jpg`, `laptop_stand.jpg`, `server/bin/`) were deleted.
-
 ### Active Repository Modules:
 
 | Module | Path | Description |
 |---|---|---|
-| **MCP Commerce Gateway** | `server/` | Go backend exposing the 14 MCP tools over SSE / HTTP. |
-| **Margin Defense & Pricing** | `server/catalog/`, `server/negotiator/` | Product search, stock counts, and secret floor price engine. |
-| **Cart Sessions & Bundles** | `server/cart/` | Multi-product session carts, dynamic upsells, 18% GST calculation. |
-| **Autonomous Wallet Ledger** | `server/wallet/` | Double-entry ledger with PostgreSQL `SELECT FOR UPDATE` ACID locks. |
-| **Razorpay Client** | `server/razorpay/` | Live Razorpay client (Payment links, orders, webhooks). |
+| **MCP Commerce Gateway** | `server/` | Go backend exposing 14 MCP tools over StreamableHTTP & SSE. |
+| **Customer UPI App Simulator** | `customer-upi-app/` | Dedicated smartphone UI on port `:3002` (UPI Circle delegation). |
 | **Merchant Control Plane** | `dashboard/` | Next.js 14 Merchant Dashboard on port `:3000`. |
-| **Customer UPI App Simulator** | `dashboard/src/app/upi-circle/` | Dedicated Customer Phone Simulator UI (UPI Circle delegation). |
-| **Database Migrations** | `server/db/migrations/` | 7 PostgreSQL schema migrations (`00001` through `00007`). |
-| **Containerization** | `docker-compose.yml` | Multi-container setup (`postgres`, `mcp-server`, `dashboard`). |
+| **Platform Admin Center** | `admin-dashboard/` | Fleet monitoring & platform settings on port `:3001`. |
+| **Desktop 1-Click App** | `installer/` | Wails v2 native app with cross-platform builds (macOS, Windows, Linux). |
+| **Database Schema** | `server/db/migrations/`, `server/db/schema.sql` | Consolidated canonical idempotent PostgreSQL schema. |
+| **Containerization** | `docker-compose.yml` | Production 6-container topology with health checks. |
 
 ---
 
-## 6. Video Demonstration Strategy (5-Minute Winning Pitch)
+## 6. Video Demonstration Strategy (2-Minute Winning Pitch)
 
-In the demo video, use a **Dual-Window Split Screen**:
-* **Left Half**: 📱 **Customer UPI App Simulator** (`localhost:3000/upi-circle`)
-* **Right Half**: 🏪 **Merchant Control Plane** (`localhost:3000/?merchant_id=...`)
-* **Center / Overlay**: 🤖 **Claude AI Assistant**
+In the demo video, use a **Split Screen / Multi-Tab View**:
+* **Window 1**: 📱 **Customer UPI App Simulator** (`http://localhost:3002`)
+* **Window 2**: 🏪 **Merchant Control Plane** (`http://localhost:3000`)
+* **Window 3**: 🧾 **GST Tax Invoice & Courier Tracking** (`http://localhost:3000/order/success`)
+* **Terminal**: 🤖 **Claude AI Assistant & Sub-0.3ms Latency Benchmarks**
 
 1. **Minute 1: The Core Thesis & Customer Setup**
    * Show the Customer Phone setting up a ₹2,000 UPI Circle auto-cap for Claude.
