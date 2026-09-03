@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       merchant_id: merchant.id,
       name: merchant.name,
       api_key: merchant.api_key,
-      message: 'Store onboarded successfully! Save your API key securely — it will not be displayed again.',
+      message: 'Store onboarded successfully! Save your API key securely - it will not be displayed again.',
     });
   } catch (error: any) {
     console.error('API /api/merchants/onboard error:', error);

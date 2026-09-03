@@ -173,7 +173,7 @@ func CreateMerchant(ctx context.Context, pool *pgxpool.Pool, m *Merchant, passph
 	).Scan(&m.ID, &m.CreatedAt)
 }
 
-// UpdateMerchantStatus updates status ('active' | 'suspended') — acts as platform kill switch.
+// UpdateMerchantStatus updates status ('active' | 'suspended') - acts as platform kill switch.
 func UpdateMerchantStatus(ctx context.Context, pool *pgxpool.Pool, merchantID, status string) error {
 	if pool == nil {
 		return fmt.Errorf("db: database pool is nil")

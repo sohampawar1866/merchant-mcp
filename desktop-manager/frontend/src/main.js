@@ -1,4 +1,4 @@
-// AgenticCheckout Desktop Control Center — Frontend Controller
+// AgenticCheckout Desktop Control Center - Frontend Controller
 let dockerStatus = { installed: false, running: false, composeCmd: '', message: 'Checking...' };
 let isOperating = false;
 
@@ -145,7 +145,7 @@ function renderDockerStatus(status) {
     startBtn.disabled = true;
   } else {
     dockerStatusCard.classList.add('banner-ready');
-    dockerMessage.textContent = `Docker daemon detected (${status.composeCmd || 'ready'}) — operational`;
+    dockerMessage.textContent = `Docker daemon detected (${status.composeCmd || 'ready'}) - operational`;
     if (!isOperating) startBtn.disabled = false;
   }
 }
@@ -173,7 +173,7 @@ startBtn.addEventListener('click', async () => {
   btnText.textContent = 'Applying & Launching...';
   btnSpinner.classList.remove('hidden');
 
-  logTerminal.textContent += '\n▶ Initiating AgenticCheckout deployment sequence...\n';
+  logTerminal.textContent += '\n[Initiating] AgenticCheckout deployment sequence...\n';
 
   try {
     if (window.go?.main?.App?.SaveConfigAndStart) {
@@ -188,25 +188,25 @@ startBtn.addEventListener('click', async () => {
       );
 
       if (result.success) {
-        btnText.textContent = 'Running ✓';
+        btnText.textContent = 'Running';
         btnSpinner.classList.add('hidden');
-        logTerminal.textContent += '\n✅ Platform services started successfully.\n';
+        logTerminal.textContent += '\nPlatform services started successfully.\n';
       } else {
         btnText.textContent = 'Launch Failed';
         btnSpinner.classList.add('hidden');
         showValidationError(result.error);
-        logTerminal.textContent += `\n❌ Error: ${result.error}\n`;
+        logTerminal.textContent += `\nError: ${result.error}\n`;
       }
     } else {
       // Mock dev mode
       logTerminal.textContent += 'Mock dev mode: Launched with transport ' + transport + '\n';
       setTimeout(() => {
-        btnText.textContent = 'Running ✓';
+        btnText.textContent = 'Running';
         btnSpinner.classList.add('hidden');
       }, 1000);
     }
   } catch (err) {
-    btnText.textContent = 'Error — Retry';
+    btnText.textContent = 'Error - Retry';
     btnSpinner.classList.add('hidden');
     showValidationError(String(err));
   } finally {
@@ -220,20 +220,20 @@ stopBtn.addEventListener('click', async () => {
   if (isOperating) return;
   isOperating = true;
   stopBtn.disabled = true;
-  logTerminal.textContent += '\n▶ Stopping all running containers...\n';
+  logTerminal.textContent += '\n[Stopping] Stopping all running containers...\n';
 
   try {
     if (window.go?.main?.App?.StopServices) {
       const result = await window.go.main.App.StopServices();
       if (result.success) {
-        btnText.textContent = '▶ Start Services';
-        logTerminal.textContent += '\n⏹ All services stopped cleanly.\n';
+        btnText.textContent = 'Start Services';
+        logTerminal.textContent += '\nAll services stopped cleanly.\n';
       } else {
-        logTerminal.textContent += `\n❌ Failed to stop: ${result.error}\n`;
+        logTerminal.textContent += `\nFailed to stop: ${result.error}\n`;
       }
     }
   } catch (err) {
-    logTerminal.textContent += `\n❌ Error: ${err}\n`;
+    logTerminal.textContent += `\nError: ${err}\n`;
   } finally {
     isOperating = false;
     stopBtn.disabled = false;
@@ -245,20 +245,20 @@ restartBtn.addEventListener('click', async () => {
   if (isOperating) return;
   isOperating = true;
   restartBtn.disabled = true;
-  logTerminal.textContent += '\n▶ Restarting all running containers...\n';
+  logTerminal.textContent += '\n[Restarting] Restarting all running containers...\n';
 
   try {
     if (window.go?.main?.App?.RestartServices) {
       const result = await window.go.main.App.RestartServices();
       if (result.success) {
-        btnText.textContent = 'Running ✓';
-        logTerminal.textContent += '\n🔄 All services restarted successfully.\n';
+        btnText.textContent = 'Running';
+        logTerminal.textContent += '\nAll services restarted successfully.\n';
       } else {
-        logTerminal.textContent += `\n❌ Failed to restart: ${result.error}\n`;
+        logTerminal.textContent += `\nFailed to restart: ${result.error}\n`;
       }
     }
   } catch (err) {
-    logTerminal.textContent += `\n❌ Error: ${err}\n`;
+    logTerminal.textContent += `\nError: ${err}\n`;
   } finally {
     isOperating = false;
     restartBtn.disabled = false;

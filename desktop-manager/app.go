@@ -293,7 +293,7 @@ func (a *App) SaveConfigAndStart(passphrase, transport, gatewayPort, customerPor
 
 	// Write .env
 	envPath := filepath.Join(a.projectRoot, ".env")
-	content := fmt.Sprintf(`# AgenticCheckout — Platform Environment Configuration
+	content := fmt.Sprintf(`# AgenticCheckout - Platform Environment Configuration
 # Configured via AgenticCheckout Desktop Control Center
 
 ENCRYPTION_PASSPHRASE=%s

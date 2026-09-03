@@ -1,4 +1,4 @@
-# AgenticCheckout — Phased Implementation Plan
+# AgenticCheckout - Phased Implementation Plan
 **Execution Roadmap for Track 01 (AI Growth & Agentic Commerce) | Razorpay /buildathon 2026**
 
 ---
@@ -128,7 +128,7 @@ Record the definitive 5-minute video presentation following the dual-screen scri
 2. **Record the 5-Minute Script**:
    * Minute 1: Problem statement & Customer UPI Circle setup.
    * Minute 2: Merchant Control Plane, secret floor margins & AI campaigns.
-   * Minute 3: Autonomous ₹1,783 bundle purchase (Fast Path — Zero Clicks).
+   * Minute 3: Autonomous ₹1,783 bundle purchase (Fast Path - Zero Clicks).
    * Minute 4: Flagship ₹12,999 Projector purchase (Razorpay Step-Up 2FA & instant auto-redirect).
    * Minute 5: Razorpay value proposition & architectural recap.
 3. **Documentation Finalization**:

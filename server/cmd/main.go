@@ -23,7 +23,7 @@ func main() {
 	// Crucial for stdio transport: keep stdout clean for JSON-RPC messages only
 	log.SetOutput(os.Stderr)
 
-	// CLI flags — take precedence over env vars and config defaults
+	// CLI flags - take precedence over env vars and config defaults
 	// Precedence: --transport flag > MCP_TRANSPORT env var > default (streamablehttp)
 	transportFlag := flag.String("transport", "", "MCP transport to use: streamablehttp | sse | stdio (overrides MCP_TRANSPORT env var)")
 	portFlag := flag.String("port", "", "Port to listen on (overrides PORT env var)")

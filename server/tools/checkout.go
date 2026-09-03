@@ -502,8 +502,8 @@ func handleCheckOrderStatus(
 			invoiceURL,
 		)
 
-		taxInvoiceMD := fmt.Sprintf(`### 🧾 Official Tax Invoice — %s
-**GSTIN:** '27AABCU9603R1ZM' | **Status:** ✅ **%s**
+		taxInvoiceMD := fmt.Sprintf(`### Official Tax Invoice - %s
+**GSTIN:** '27AABCU9603R1ZM' | **Status:** **%s**
 
 | Field | Details |
 |---|---|

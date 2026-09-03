@@ -1,5 +1,5 @@
 -- ==============================================================================
--- AGENTIC COMMERCE PLATFORM — CANONICAL DATABASE SCHEMA
+-- AGENTIC COMMERCE PLATFORM - CANONICAL DATABASE SCHEMA
 -- Multi-Tenant, ACID Double-Entry Ledger, Category Partitioned Indexes
 -- Fully Idempotent Setup Script (PostgreSQL 15+)
 -- ==============================================================================

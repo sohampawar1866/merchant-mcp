@@ -40,7 +40,7 @@ func TestMultiTenant_IsolationAndKillSwitch(t *testing.T) {
 	searchHandler := handleSearchCatalog(pool, auditLogger, cfg)
 
 	// ─────────────────────────────────────────────────────────────
-	// TEST 1: Tenant Isolation — Query Store 1 vs Store 2
+	// TEST 1: Tenant Isolation - Query Store 1 vs Store 2
 	// ─────────────────────────────────────────────────────────────
 	reqStore1 := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
@@ -93,7 +93,7 @@ func TestMultiTenant_IsolationAndKillSwitch(t *testing.T) {
 	t.Logf("✓ Tenant Isolation Verified: Store 2 returned %d products, 0 Store 1 items", len(data2.Results))
 
 	// ─────────────────────────────────────────────────────────────
-	// TEST 2: Platform Kill Switch — Suspend & Reactivate Store 2
+	// TEST 2: Platform Kill Switch - Suspend & Reactivate Store 2
 	// ─────────────────────────────────────────────────────────────
 	t.Log("Activating Platform Kill Switch on Demo Store 2...")
 	err = db.UpdateMerchantStatus(ctx, pool, "00000000-0000-0000-0000-000000000002", "suspended")

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Platform Admin — AgenticCheckout',
+  title: 'Platform Admin - AgenticCheckout',
   description: 'Global Multi-Tenant Control Plane & Kill Switch Console',
 };
 

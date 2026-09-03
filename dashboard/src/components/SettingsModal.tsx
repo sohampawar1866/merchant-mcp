@@ -125,7 +125,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsChanged, merchantId }
               Store Policies & Dynamic Settings
             </h3>
             <p className="text-xs text-figma-ink/80 font-medium mt-0.5">
-              All credentials, transport, and guardrails live in PostgreSQL — zero container restarts needed.
+              All credentials, transport, and guardrails live in PostgreSQL - zero container restarts needed.
             </p>
           </div>
           <button

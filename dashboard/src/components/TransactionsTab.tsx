@@ -170,7 +170,7 @@ export function TransactionsTab({ merchantId }: { merchantId: string }) {
                         Checkout ↗
                       </a>
                     ) : (
-                      <span className="text-xs text-zinc-400">—</span>
+                      <span className="text-xs text-zinc-400">-</span>
                     )}
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export function TransactionsTab({ merchantId }: { merchantId: string }) {
                             Open Link <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         ) : (
-                          <span className="text-xs text-zinc-400">—</span>
+                          <span className="text-xs text-zinc-400">-</span>
                         )}
                       </td>
                     </tr>

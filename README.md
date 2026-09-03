@@ -1,5 +1,5 @@
-# ⚡ AgenticCheckout: Autonomous Agentic Commerce Gateway
-### *Razorpay AI Buildathon 2026 — Track 01: AI Growth & Agentic Commerce*
+# AgenticCheckout: Autonomous Agentic Commerce Gateway
+### *Razorpay AI Buildathon 2026 - Track 01: AI Growth & Agentic Commerce*
 
 [![Razorpay Buildathon](https://img.shields.io/badge/Razorpay-AI_Buildathon_2026-blue.svg)](https://razorpay.com)
 [![Track 1](https://img.shields.io/badge/Track_01-AI_Growth_%26_Agentic_Commerce-purple.svg)](#)
@@ -11,7 +11,7 @@
 
 ---
 
-## 🚀 Overview
+## Overview
 
 **AgenticCheckout** is an enterprise-grade, high-performance **Unified Agentic Commerce Gateway powered by Razorpay**. It bridges the gap between **autonomous buyer AI agents** (Claude, ChatGPT, Cursor) and **real-world merchant economics**.
 
@@ -21,7 +21,7 @@ AgenticCheckout solves this with a **Unified Model Context Protocol (MCP) Commer
 
 ---
 
-### 🧩 The Four Core Dilemmas Solved
+### The Four Core Dilemmas Solved
 
 1. **The Merchant Dilemma (Margin Protection)**: Merchants cannot open raw APIs to autonomous buyer bots without risking rapid margin erosion (uncontrolled discounting) or inventory exhaustion. Our Go engine mathematically enforces private floor prices.
 2. **The Customer Dilemma (Regulatory Compliance & Trust)**: In India, RBI strictly mandates Additional Factor of Authentication (2FA). An AI cannot hold raw credit cards or guess OTPs. Autonomous micro-spending requires a legally compliant delegation framework (**NPCI UPI Circle**).
@@ -30,7 +30,7 @@ AgenticCheckout solves this with a **Unified Model Context Protocol (MCP) Commer
 
 ---
 
-## 🏛️ The Three System Planes
+## The Three System Planes
 
 The architecture is strictly separated into three decoupled components:
 
@@ -79,7 +79,7 @@ The architecture is strictly separated into three decoupled components:
 
 ---
 
-## 🎯 Key Architectural Innovations
+## Key Architectural Innovations
 
 ### 1. Unified Single-Gateway Architecture
 * **No "500 Connectors"**: Customers and AI agents connect **ONCE** to the AgenticCheckout Gateway (`http://localhost:8080/mcp`).
@@ -110,7 +110,7 @@ The architecture is strictly separated into three decoupled components:
 
 ---
 
-## 🔄 End-to-End Userflows
+## End-to-End Userflows
 
 ### Phase A: Day 0 Setup (One-Time Configuration)
 
@@ -131,7 +131,7 @@ The architecture is strictly separated into three decoupled components:
 
 ### Phase B: Day 1..N Daily Usage
 
-#### Flow 1: Micro-Purchase ($\le$ ₹2,000) — Zero-Click Fast Path
+#### Flow 1: Micro-Purchase ($\le$ ₹2,000) - Zero-Click Fast Path
 *(Example: Customer asks Claude to buy the Laptop Stand + Desk Mat bundle for ₹1,783)*
 
 1. **Discovery & Bundle Recommendation**:
@@ -152,7 +152,7 @@ The architecture is strictly separated into three decoupled components:
 
 ---
 
-#### Flow 2: High-Value Purchase (> ₹2,000) — Razorpay Step-Up 2FA & Auto-Redirect
+#### Flow 2: High-Value Purchase (> ₹2,000) - Razorpay Step-Up 2FA & Auto-Redirect
 *(Example: Customer asks Claude to buy the AeroBeam 4K Projector for ₹12,999)*
 
 1. **Cap Escalation**:
@@ -181,7 +181,7 @@ The architecture is strictly separated into three decoupled components:
 
 ---
 
-## 📦 Active Repository Modules
+## Active Repository Modules
 
 | Module | Path | Description |
 |---|---|---|
@@ -195,7 +195,7 @@ The architecture is strictly separated into three decoupled components:
 
 ---
 
-## ⚡ Quickstart
+## Quickstart
 
 ### Prerequisites
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v24+)
@@ -251,7 +251,7 @@ cd desktop-manager
 
 ---
 
-## 🛠️ MCP Tool Catalog (Model Context Protocol)
+## MCP Tool Catalog (Model Context Protocol)
 
 The Go MCP Gateway exposes **14 production tools** with integer paise arithmetic:
 
@@ -274,7 +274,7 @@ The Go MCP Gateway exposes **14 production tools** with integer paise arithmetic
 
 ---
 
-## 📊 Performance Benchmarks & SLA Verification
+## Performance Benchmarks & SLA Verification
 
 We executed automated load tests and Go engine profiling against PostgreSQL 16:
 
@@ -286,7 +286,7 @@ We executed automated load tests and Go engine profiling against PostgreSQL 16:
 === RUN   TestSub5msLatencyBenchmark
     Sequential Latency Benchmark (100 runs): Avg = 0.28ms | Max = 2.23ms
     Concurrent Load Benchmark (20 workers, 100 queries): Avg Latency = 5.95ms
-    ✅ SLA GUARANTEE PASSED: Average query latency is 0.28ms (< 5ms SLA)
+    PASS: SLA GUARANTEE - Average query latency is 0.28ms (< 5ms SLA)
 --- PASS: TestSub5msLatencyBenchmark (0.07s)
 
 goos: darwin | goarch: arm64 | cpu: Apple M1
@@ -299,7 +299,7 @@ BenchmarkCategoryPartitionQuery-8: 15,834 ops | 159,668 ns/op (0.16ms / query)
 
 ---
 
-## 🔒 Security & RBI Compliance
+## Security & RBI Compliance
 
 1. **RBI 2FA Mandate Compliance**: Autonomous spending is strictly bounded by secondary authorization (NPCI UPI Circle). Amounts exceeding the cap trigger mandatory Razorpay Step-Up 2FA.
 2. **Confidential Floor Prices**: Private merchant margins are never exposed over MCP tool responses or client APIs.
@@ -309,5 +309,5 @@ BenchmarkCategoryPartitionQuery-8: 15,834 ops | 159,668 ns/op (0.16ms / query)
 
 ---
 
-## 📄 License
+## License
 MIT License. Built for the **Razorpay AI Buildathon 2026**.

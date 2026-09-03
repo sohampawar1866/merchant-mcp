@@ -121,8 +121,8 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		`, orderID).Scan(&merchantID)
 	}
 	if merchantID == "" {
-		log.Printf("webhook: cannot resolve merchant_id from URL param or order lookup for order '%s' — rejecting", orderID)
-		http.Error(w, `{"error":"MERCHANT_UNRESOLVABLE","message":"Cannot identify merchant for this webhook — include ?merchant_id= in the webhook URL or ensure the order exists in the database"}`, http.StatusBadRequest)
+		log.Printf("webhook: cannot resolve merchant_id from URL param or order lookup for order '%s' - rejecting", orderID)
+		http.Error(w, `{"error":"MERCHANT_UNRESOLVABLE","message":"Cannot identify merchant for this webhook - include ?merchant_id= in the webhook URL or ensure the order exists in the database"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if activeSecret == "" && activeStrictMode {
-		log.Printf("webhook: store '%s' does not have a webhook secret configured in database — rejecting", merchantID)
+		log.Printf("webhook: store '%s' does not have a webhook secret configured in database - rejecting", merchantID)
 		http.Error(w, `{"error":"WEBHOOK_SECRET_NOT_CONFIGURED","message":"Merchant webhook secret is not configured in database"}`, http.StatusUnauthorized)
 		return
 	}

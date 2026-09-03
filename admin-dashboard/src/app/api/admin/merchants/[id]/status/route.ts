@@ -36,7 +36,7 @@ export async function PATCH(
       success: true,
       merchant: updated,
       message: `Store '${updated.name}' is now ${updated.status}. ${
-        updated.status === 'suspended' ? 'Platform kill switch activated — all tool calls will be immediately blocked.' : 'Store reactivated.'
+        updated.status === 'suspended' ? 'Platform kill switch activated - all tool calls will be immediately blocked.' : 'Store reactivated.'
       }`,
     });
   } catch (error: any) {
