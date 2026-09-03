@@ -47,4 +47,5 @@ desktop-manager/build/bin/
 node_modules/
 # Planning & GSD
 .planning/
+SUBMISSION_VIDEO_SCRIPT.md
 
