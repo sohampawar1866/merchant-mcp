@@ -4,14 +4,34 @@ import {main} from '../models';
 
 export function CheckDockerStatus():Promise<main.DockerStatus>;
 
+export function GeneratePassphrase():Promise<string>;
+
+export function GetConfig():Promise<main.ConfigState>;
+
 export function GetOS():Promise<string>;
 
-export function OpenDashboard():Promise<void>;
+export function GetServices():Promise<Array<main.ServiceStatus>>;
+
+export function OpenAdminDashboard():Promise<void>;
+
+export function OpenAgentManifest():Promise<void>;
+
+export function OpenCustomerUPIApp():Promise<void>;
 
 export function OpenDockerDesktop():Promise<void>;
 
 export function OpenInstallPage():Promise<void>;
 
-export function OpenRazorpayDashboard():Promise<void>;
+export function OpenMCPGateway():Promise<void>;
 
-export function WriteEnvAndLaunch(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<main.LaunchResult>;
+export function OpenMerchantDashboard():Promise<void>;
+
+export function RestartServices():Promise<main.LaunchResult>;
+
+export function SaveConfigAndStart(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:boolean):Promise<main.LaunchResult>;
+
+export function StartSimulation():Promise<main.LaunchResult>;
+
+export function StopServices():Promise<main.LaunchResult>;
+
+export function StopSimulation():Promise<main.LaunchResult>;

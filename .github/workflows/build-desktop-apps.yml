@@ -1,4 +1,4 @@
-name: Build Desktop Installer Release Assets
+name: Build Desktop Control Center Release Assets
 
 on:
   push:
@@ -29,13 +29,15 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Build macOS App
+      - name: Build macOS Application
         run: |
-          cd desktop-manager/frontend && npm install && npm run build && cd ..
-          wails build -platform darwin/arm64 -o AgenticCheckout-macOS-arm64
+          cd desktop-manager
+          cd frontend && npm install && npm run build && cd ..
+          wails build -platform darwin/arm64
           cd build/bin
-          hdiutil create -volname "AgenticCheckout" -srcfolder "AgenticCheckout.app" -ov -format UDZO "AgenticCheckout-macOS-arm64.dmg"
-          zip -r "AgenticCheckout-macOS-arm64.zip" "AgenticCheckout.app"
+          APP_NAME=$(ls -d *.app | head -n 1)
+          hdiutil create -volname "AgenticCheckout" -srcfolder "$APP_NAME" -ov -format UDZO "AgenticCheckout-macOS-arm64.dmg"
+          zip -r "AgenticCheckout-macOS-arm64.zip" "$APP_NAME"
 
       - name: Upload macOS Release Assets
         uses: softprops/action-gh-release@v2
@@ -48,7 +50,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows:
-    name: Build Windows (AMD64)
+    name: Build Windows (x64)
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -71,26 +73,27 @@ jobs:
       - name: Build Windows Executable
         shell: pwsh
         run: |
-          cd desktop-manager/frontend
+          cd desktop-manager
+          cd frontend
           npm install
           npm run build
           cd ..
-          wails build -platform windows/amd64 -o AgenticCheckout-Windows-amd64.exe
+          wails build -platform windows/amd64 -o AgenticCheckout-Windows-x64.exe
           cd build/bin
-          Compress-Archive -Path "AgenticCheckout-Windows-amd64.exe" -DestinationPath "AgenticCheckout-Windows-amd64.zip"
+          Compress-Archive -Path "AgenticCheckout-Windows-x64.exe" -DestinationPath "AgenticCheckout-Windows-x64.zip"
 
       - name: Upload Windows Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            desktop-manager/build/bin/AgenticCheckout-Windows-amd64.exe
-            desktop-manager/build/bin/AgenticCheckout-Windows-amd64.zip
+            desktop-manager/build/bin/AgenticCheckout-Windows-x64.exe
+            desktop-manager/build/bin/AgenticCheckout-Windows-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
-    name: Build Linux (AMD64)
+    name: Build Linux (x64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -116,20 +119,21 @@ jobs:
 
       - name: Build Linux Binary
         run: |
-          cd desktop-manager/frontend
+          cd desktop-manager
+          cd frontend
           npm install
           npm run build
           cd ..
-          wails build -platform linux/amd64 -o AgenticCheckout-Linux-amd64
+          wails build -platform linux/amd64 -o AgenticCheckout-Linux-x64
           cd build/bin
-          tar -czvf AgenticCheckout-Linux-amd64.tar.gz AgenticCheckout-Linux-amd64
+          tar -czvf AgenticCheckout-Linux-x64.tar.gz AgenticCheckout-Linux-x64
 
       - name: Upload Linux Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            desktop-manager/build/bin/AgenticCheckout-Linux-amd64
-            desktop-manager/build/bin/AgenticCheckout-Linux-amd64.tar.gz
+            desktop-manager/build/bin/AgenticCheckout-Linux-x64
+            desktop-manager/build/bin/AgenticCheckout-Linux-x64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

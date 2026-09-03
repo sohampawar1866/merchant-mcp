@@ -6,12 +6,32 @@ export function CheckDockerStatus() {
   return window['go']['main']['App']['CheckDockerStatus']();
 }
 
+export function GeneratePassphrase() {
+  return window['go']['main']['App']['GeneratePassphrase']();
+}
+
+export function GetConfig() {
+  return window['go']['main']['App']['GetConfig']();
+}
+
 export function GetOS() {
   return window['go']['main']['App']['GetOS']();
 }
 
-export function OpenDashboard() {
-  return window['go']['main']['App']['OpenDashboard']();
+export function GetServices() {
+  return window['go']['main']['App']['GetServices']();
+}
+
+export function OpenAdminDashboard() {
+  return window['go']['main']['App']['OpenAdminDashboard']();
+}
+
+export function OpenAgentManifest() {
+  return window['go']['main']['App']['OpenAgentManifest']();
+}
+
+export function OpenCustomerUPIApp() {
+  return window['go']['main']['App']['OpenCustomerUPIApp']();
 }
 
 export function OpenDockerDesktop() {
@@ -22,10 +42,30 @@ export function OpenInstallPage() {
   return window['go']['main']['App']['OpenInstallPage']();
 }
 
-export function OpenRazorpayDashboard() {
-  return window['go']['main']['App']['OpenRazorpayDashboard']();
+export function OpenMCPGateway() {
+  return window['go']['main']['App']['OpenMCPGateway']();
 }
 
-export function WriteEnvAndLaunch(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['main']['App']['WriteEnvAndLaunch'](arg1, arg2, arg3, arg4, arg5);
+export function OpenMerchantDashboard() {
+  return window['go']['main']['App']['OpenMerchantDashboard']();
+}
+
+export function RestartServices() {
+  return window['go']['main']['App']['RestartServices']();
+}
+
+export function SaveConfigAndStart(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['SaveConfigAndStart'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function StartSimulation() {
+  return window['go']['main']['App']['StartSimulation']();
+}
+
+export function StopServices() {
+  return window['go']['main']['App']['StopServices']();
+}
+
+export function StopSimulation() {
+  return window['go']['main']['App']['StopSimulation']();
 }
