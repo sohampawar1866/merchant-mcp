@@ -17,11 +17,11 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "AgenticCheckout",
-		Width:     620,
-		Height:    760,
-		MinWidth:  580,
-		MinHeight: 680,
+		Title:     "AgenticCheckout Desktop Control Center",
+		Width:     680,
+		Height:    820,
+		MinWidth:  640,
+		MinHeight: 740,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

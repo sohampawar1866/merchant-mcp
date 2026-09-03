@@ -31,7 +31,7 @@ jobs:
 
       - name: Build macOS App
         run: |
-          cd installer/frontend && npm install && npm run build && cd ..
+          cd desktop-manager/frontend && npm install && npm run build && cd ..
           wails build -platform darwin/arm64 -o AgenticCheckout-macOS-arm64
           cd build/bin
           hdiutil create -volname "AgenticCheckout" -srcfolder "AgenticCheckout.app" -ov -format UDZO "AgenticCheckout-macOS-arm64.dmg"
@@ -42,8 +42,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            installer/build/bin/AgenticCheckout-macOS-arm64.dmg
-            installer/build/bin/AgenticCheckout-macOS-arm64.zip
+            desktop-manager/build/bin/AgenticCheckout-macOS-arm64.dmg
+            desktop-manager/build/bin/AgenticCheckout-macOS-arm64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -71,7 +71,7 @@ jobs:
       - name: Build Windows Executable
         shell: pwsh
         run: |
-          cd installer/frontend
+          cd desktop-manager/frontend
           npm install
           npm run build
           cd ..
@@ -84,8 +84,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            installer/build/bin/AgenticCheckout-Windows-amd64.exe
-            installer/build/bin/AgenticCheckout-Windows-amd64.zip
+            desktop-manager/build/bin/AgenticCheckout-Windows-amd64.exe
+            desktop-manager/build/bin/AgenticCheckout-Windows-amd64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -116,7 +116,7 @@ jobs:
 
       - name: Build Linux Binary
         run: |
-          cd installer/frontend
+          cd desktop-manager/frontend
           npm install
           npm run build
           cd ..
@@ -129,7 +129,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            installer/build/bin/AgenticCheckout-Linux-amd64
-            installer/build/bin/AgenticCheckout-Linux-amd64.tar.gz
+            desktop-manager/build/bin/AgenticCheckout-Linux-amd64
+            desktop-manager/build/bin/AgenticCheckout-Linux-amd64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

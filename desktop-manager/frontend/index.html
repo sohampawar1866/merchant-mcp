@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgenticCheckout Desktop Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <!-- Drag bar for macOS/Windows -->
+  <div class="window-drag-region" style="--wails-draggable: drag"></div>
+
+  <div class="app-container">
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="brand">
+        <svg class="zap-icon" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span class="brand-name">AgenticCheckout Control Center</span>
+      </div>
+      <div class="version-badge">v1.0.0</div>
+    </header>
+
+    <!-- Main Scroll Content -->
+    <main class="main-content">
+      <!-- Title Section -->
+      <section class="hero-section">
+        <div class="eyebrow">PLATFORM INFRASTRUCTURE</div>
+        <h1 class="hero-title">Gateway Control Center</h1>
+        <p class="hero-desc">Manage your Multi-Tenant Commerce Gateway, PostgreSQL, Redis, and Customer Simulator.</p>
+      </section>
+
+      <!-- Validation Error Area -->
+      <div id="validationError" class="validation-error hidden">
+        <span>⚠️</span>
+        <span id="validationErrorText">Please fill in all mandatory configuration fields.</span>
+      </div>
+
+      <form id="setupForm" onsubmit="return false;">
+        <!-- Section 1: Platform Master Security Passphrase (MANDATORY) -->
+        <div class="form-card card-lime">
+          <div class="card-header">
+            <div class="card-title">Master Security Passphrase <span class="req">*</span></div>
+            <button type="button" class="gen-btn" id="genPassphraseBtn">🎲 Generate Key</button>
+          </div>
+
+          <div class="field-group mt-2">
+            <div class="password-wrapper">
+              <input type="password" id="passphraseInput" placeholder="Enter platform encryption passphrase..." autocomplete="off" required />
+              <button type="button" class="eye-toggle" id="togglePassphraseBtn">👁</button>
+            </div>
+            <span class="field-hint">Used by PostgreSQL <code>pgcrypto</code> (AES-256) to symmetrically encrypt all merchant Razorpay keys in the database. Required for platform operation.</span>
+          </div>
+        </div>
+
+        <!-- Section 2: MCP Transport Protocol -->
+        <div class="form-card card-lilac mt-3">
+          <div class="card-title mb-2">MCP Transport Protocol</div>
+          <div class="transport-options">
+            <label class="transport-pill active" data-transport="streamablehttp">
+              <input type="radio" name="transport" value="streamablehttp" checked />
+              <span class="radio-dot"></span>
+              <span class="pill-text"><strong>streamablehttp</strong> (Recommended for Claude/Cursor)</span>
+            </label>
+            <label class="transport-pill" data-transport="sse">
+              <input type="radio" name="transport" value="sse" />
+              <span class="radio-dot"></span>
+              <span class="pill-text">sse</span>
+            </label>
+            <label class="transport-pill" data-transport="stdio">
+              <input type="radio" name="transport" value="stdio" />
+              <span class="radio-dot"></span>
+              <span class="pill-text">stdio (Local Subprocess)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section 3: Port Settings & Optional Simulator Toggle -->
+        <div class="form-card card-mint mt-3">
+          <div class="card-title mb-2">Service Ports & Optional Testing Simulator</div>
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="gatewayPort">MCP Gateway Port</label>
+              <input type="number" id="gatewayPort" value="8080" min="1024" max="65535" required />
+            </div>
+            <div class="field-group">
+              <label for="customerPort">Customer UPI Port</label>
+              <input type="number" id="customerPort" value="3002" min="1024" max="65535" required />
+            </div>
+          </div>
+          <div class="grid-2 mt-2">
+            <div class="field-group">
+              <label for="postgresPort">PostgreSQL Port (Host)</label>
+              <input type="number" id="postgresPort" value="5433" min="1024" max="65535" required />
+            </div>
+            <div class="field-group">
+              <label for="redisPort">Redis Port (Host)</label>
+              <input type="number" id="redisPort" value="6380" min="1024" max="65535" required />
+            </div>
+          </div>
+
+          <!-- Optional Simulator Checkbox Toggle -->
+          <label class="checkbox-row mt-3">
+            <input type="checkbox" id="includeSimCheck" checked />
+            <span class="checkbox-label-text">Enable Customer UPI Phone Simulator (:3002)</span>
+          </label>
+          <span class="field-hint" style="margin-top: 4px; display: block;">Spins up the interactive smartphone UI to test NPCI UPI Circle autonomous agent spending. Uncheck to run core merchant infrastructure only.</span>
+        </div>
+
+        <!-- Docker Status Alert Card -->
+        <div id="dockerStatusCard" class="docker-banner banner-checking mt-3">
+          <div class="docker-status-left">
+            <span id="dockerDot" class="status-indicator"></span>
+            <span id="dockerMessage">Checking Docker environment...</span>
+          </div>
+          <div id="dockerActionArea"></div>
+        </div>
+
+        <!-- Action Buttons Toolbar -->
+        <div class="btn-action-group mt-3">
+          <button type="button" id="startBtn" class="primary-btn" style="flex: 2;">
+            <span id="btnText">▶ Start / Apply Settings</span>
+            <span id="btnSpinner" class="spinner hidden"></span>
+          </button>
+          <button type="button" id="restartBtn" class="btn-restart" style="flex: 1;">
+            🔄 Restart
+          </button>
+          <button type="button" id="stopBtn" class="btn-stop" style="flex: 1;">
+            ⏹ Stop All
+          </button>
+        </div>
+      </form>
+
+      <!-- Live Service Hub & Local URLs -->
+      <div id="servicesHubCard" class="form-card card-cream mt-3">
+        <div class="card-title">Live Services & Direct Local Access</div>
+        <div class="service-hub-grid">
+          <div class="service-hub-item">
+            <div class="service-hub-info">
+              <span id="dotMerchant" class="service-status-dot"></span>
+              <div>
+                <div class="service-name">Merchant Store & Margin Shield</div>
+                <div class="service-port-badge">http://localhost:3000</div>
+              </div>
+            </div>
+            <button type="button" id="linkMerchantBtn" class="service-open-btn">Open ↗</button>
+          </div>
+
+          <div class="service-hub-item">
+            <div class="service-hub-info">
+              <span id="dotAdmin" class="service-status-dot"></span>
+              <div>
+                <div class="service-name">Platform Admin Control Center</div>
+                <div class="service-port-badge">http://localhost:3001</div>
+              </div>
+            </div>
+            <button type="button" id="linkAdminBtn" class="service-open-btn">Open ↗</button>
+          </div>
+
+          <div class="service-hub-item" id="hubItemUpi">
+            <div class="service-hub-info">
+              <span id="dotUpi" class="service-status-dot"></span>
+              <div>
+                <div class="service-name">Customer UPI Circle Simulator</div>
+                <div class="service-port-badge" id="badgeUpiPort">http://localhost:3002</div>
+              </div>
+            </div>
+            <button type="button" id="linkUpiBtn" class="service-open-btn">Open ↗</button>
+          </div>
+
+          <div class="service-hub-item">
+            <div class="service-hub-info">
+              <span id="dotGateway" class="service-status-dot"></span>
+              <div>
+                <div class="service-name">Go Unified MCP Gateway</div>
+                <div class="service-port-badge" id="badgeGatewayPort">http://localhost:8080/mcp</div>
+              </div>
+            </div>
+            <button type="button" id="linkGatewayBtn" class="service-open-btn">Open ↗</button>
+          </div>
+
+          <div class="service-hub-item">
+            <div class="service-hub-info">
+              <span id="dotManifest" class="service-status-dot"></span>
+              <div>
+                <div class="service-name">Open Agent Discovery Manifest</div>
+                <div class="service-port-badge" id="badgeManifestPort">http://localhost:8080/.well-known/agent-manifest.json</div>
+              </div>
+            </div>
+            <button type="button" id="linkManifestBtn" class="service-open-btn">View JSON ↗</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Terminal Console -->
+      <div id="logSection" class="log-container mt-3">
+        <div class="log-header">
+          <span>CONTAINER TELEMETRY & LOGS</span>
+          <button type="button" id="toggleLogsBtn" class="link-btn">Clear</button>
+        </div>
+        <pre id="logTerminal">Ready to launch AgenticCheckout Control Center. Select actions above.
+</pre>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

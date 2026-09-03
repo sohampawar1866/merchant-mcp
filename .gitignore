@@ -41,9 +41,9 @@ customer-upi-app/node_modules/
 customer-upi-app/.next/
 customer-upi-app/out/
 customer-upi-app/dist/
-installer/frontend/node_modules/
-installer/frontend/dist/
-installer/build/bin/
+desktop-manager/frontend/node_modules/
+desktop-manager/frontend/dist/
+desktop-manager/build/bin/
 node_modules/
 # Planning & GSD
 .planning/

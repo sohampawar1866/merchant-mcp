@@ -3,7 +3,7 @@ node_modules/
 */*/node_modules/
 .next/
 */.next/
-installer/
+desktop-manager/
 .git/
 .planning/
 dist/

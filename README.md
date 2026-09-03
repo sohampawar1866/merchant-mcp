@@ -133,11 +133,15 @@ Open your browser:
 
 ### Option 2: Desktop 1-Click Installer (macOS, Windows, Linux)
 
-AgenticCheckout includes a native **Wails v2 Desktop GUI installer**:
-* Pre-checks and starts Docker automatically.
-* Allows merchants to enter Razorpay Test Credentials with live validation.
-* Remembers configuration in `.env` across runs.
-* Launches all services and provides 1-click access buttons.
+### Option 2: Desktop Control Center (macOS, Windows, Linux)
+
+AgenticCheckout includes a native **Wails v2 Desktop Control Center**:
+* Pre-checks and starts Docker daemon automatically.
+* Enforces mandatory **Master Security Passphrase** (`ENCRYPTION_PASSPHRASE`) configuration on first launch.
+* Automatically creates `.env` from `.env.example` with verified settings.
+* Controls container lifecycle with **Start**, **Stop All**, and **Restart** buttons.
+* Allows toggling the **Customer UPI Phone Simulator (`:3002`)** on or off.
+* Provides 1-click access to all local URLs (Merchant Dashboard, Admin Center, Simulator, MCP Gateway, Manifest).
 
 #### Automated GitHub Releases:
 Our GitHub Actions workflow automatically builds release binaries on every release tag:
@@ -147,7 +151,7 @@ Our GitHub Actions workflow automatically builds release binaries on every relea
 
 To build locally:
 ```bash
-cd installer
+cd desktop-manager
 ./build-all.sh host    # Builds for current operating system
 ./build-all.sh mac     # Builds macOS bundle
 ./build-all.sh windows # Builds Windows executable

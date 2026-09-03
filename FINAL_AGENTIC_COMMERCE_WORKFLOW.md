@@ -155,7 +155,7 @@ The architecture is strictly separated into three decoupled components:
 | **Customer UPI App Simulator** | `customer-upi-app/` | Dedicated smartphone UI on port `:3002` (UPI Circle delegation). |
 | **Merchant Control Plane** | `dashboard/` | Next.js 14 Merchant Dashboard on port `:3000`. |
 | **Platform Admin Center** | `admin-dashboard/` | Fleet monitoring & platform settings on port `:3001`. |
-| **Desktop 1-Click App** | `installer/` | Wails v2 native app with cross-platform builds (macOS, Windows, Linux). |
+| **Desktop Control Center** | `desktop-manager/` | Wails v2 native app with cross-platform builds (macOS, Windows, Linux). |
 | **Database Schema** | `server/db/migrations/`, `server/db/schema.sql` | Consolidated canonical idempotent PostgreSQL schema. |
 | **Containerization** | `docker-compose.yml` | Production 6-container topology with health checks. |
 
