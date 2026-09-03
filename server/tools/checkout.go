@@ -259,12 +259,14 @@ func handleCreateCheckout(
 		upiLink := (deliveryMode == "upi_link")
 
 		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, razorpay.CreatePaymentLinkRequest{
-			Amount:        agreedPrice,
-			Currency:      "INR",
-			Description:   fmt.Sprintf("Purchase of %s (%s)", productName, merchant.Name),
-			CustomerPhone: customerPhone,
-			CustomerEmail: customerEmail,
-			UPILink:       upiLink,
+			Amount:         agreedPrice,
+			Currency:       "INR",
+			Description:    fmt.Sprintf("Purchase of %s (%s)", productName, merchant.Name),
+			CustomerPhone:  customerPhone,
+			CustomerEmail:  customerEmail,
+			UPILink:        upiLink,
+			CallbackURL:    "http://localhost:3000/order/success",
+			CallbackMethod: "get",
 		}, keyID, keySecret)
 		if err != nil {
 			errOutput := fmt.Sprintf("razorpay payment link creation failed: %v", err)

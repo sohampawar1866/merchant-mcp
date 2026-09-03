@@ -29,13 +29,15 @@ type OrderResponse struct {
 
 // CreatePaymentLinkRequest defines payload for POST /v1/payment_links
 type CreatePaymentLinkRequest struct {
-	Amount        int    `json:"amount"` // in paise
-	Currency      string `json:"currency"`
-	Description   string `json:"description"`
-	CustomerName  string `json:"customer_name,omitempty"`
-	CustomerEmail string `json:"customer_email,omitempty"`
-	CustomerPhone string `json:"customer_phone,omitempty"`
-	UPILink       bool   `json:"upi_link"`
+	Amount         int    `json:"amount"` // in paise
+	Currency       string `json:"currency"`
+	Description    string `json:"description"`
+	CustomerName   string `json:"customer_name,omitempty"`
+	CustomerEmail  string `json:"customer_email,omitempty"`
+	CustomerPhone  string `json:"customer_phone,omitempty"`
+	UPILink        bool   `json:"upi_link"`
+	CallbackURL    string `json:"callback_url,omitempty"`
+	CallbackMethod string `json:"callback_method,omitempty"`
 }
 
 // PaymentLinkResponse defines Razorpay Payment Link response
@@ -149,6 +151,14 @@ func (c *Client) CreatePaymentLink(ctx context.Context, req CreatePaymentLinkReq
 			"name":    req.CustomerName,
 			"email":   req.CustomerEmail,
 			"contact": req.CustomerPhone,
+		}
+	}
+	if req.CallbackURL != "" {
+		payload["callback_url"] = req.CallbackURL
+		if req.CallbackMethod != "" {
+			payload["callback_method"] = req.CallbackMethod
+		} else {
+			payload["callback_method"] = "get"
 		}
 	}
 

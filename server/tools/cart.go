@@ -440,12 +440,14 @@ func handleCheckoutCart(
 		itemDesc := fmt.Sprintf("Multi-item cart purchase (%d items) from %s", len(currentCart.Items), merchant.Name)
 
 		linkReq := razorpay.CreatePaymentLinkRequest{
-			Amount:        currentCart.TotalPaise,
-			Currency:      "INR",
-			Description:   itemDesc,
-			CustomerPhone: customerPhone,
-			CustomerEmail: customerEmail,
-			UPILink:       upiLink,
+			Amount:         currentCart.TotalPaise,
+			Currency:       "INR",
+			Description:    itemDesc,
+			CustomerPhone:  customerPhone,
+			CustomerEmail:  customerEmail,
+			UPILink:        upiLink,
+			CallbackURL:    "http://localhost:3000/order/success",
+			CallbackMethod: "get",
 		}
 
 		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, linkReq, merchant.RazorpayKeyID, merchant.RazorpayKeySecret)

@@ -70,6 +70,8 @@ export default function CustomerUpiAppPage() {
     title: string;
     message: string;
     orderId?: string;
+    redirectUrl?: string;
+    actionLabel?: string;
   } | null>(null);
 
   const fetchWallet = async () => {
@@ -155,6 +157,8 @@ export default function CustomerUpiAppPage() {
           title: '⚡ UPI Circle Auto-Approved!',
           message: data.message,
           orderId: data.order_id,
+          redirectUrl: `http://localhost:3000/order/success?order_id=${data.order_id}`,
+          actionLabel: 'View Itemized GST Invoice',
         });
         fetchWallet();
       } else if (data.escalate_2fa) {
@@ -162,6 +166,8 @@ export default function CustomerUpiAppPage() {
           type: 'alert',
           title: '🛡️ Exceeds Auto-Cap (Razorpay 2FA Required)',
           message: data.message,
+          redirectUrl: `http://localhost:3000/order/success?order_id=ord_sim_stepup_2fa&razorpay_payment_id=pay_sim_rzp2fa_984`,
+          actionLabel: 'Authorize via Razorpay 2FA',
         });
       } else {
         setNotification({
@@ -377,6 +383,21 @@ export default function CustomerUpiAppPage() {
                       <p className="text-[11px] opacity-90 mt-0.5 leading-snug">{notification.message}</p>
                       {notification.orderId && (
                         <p className="text-[9px] font-mono text-zinc-400 mt-1">Order Ref: {notification.orderId}</p>
+                      )}
+                      {notification.redirectUrl && (
+                        <a
+                          href={notification.redirectUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 mt-2 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 ${
+                            notification.type === 'success'
+                              ? 'bg-emerald-500 hover:bg-emerald-400 text-black'
+                              : 'bg-amber-500 hover:bg-amber-400 text-black'
+                          }`}
+                        >
+                          <span>{notification.actionLabel || 'View Details'}</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                       )}
                     </div>
                   </div>
