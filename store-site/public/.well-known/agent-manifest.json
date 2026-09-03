@@ -1,0 +1,29 @@
+{
+  "schema_version": "2026-03-01",
+  "store_name": "Soham Store",
+  "platform": "AgenticCheckout Autonomous Commerce Clearinghouse",
+  "protocol_compliance": [
+    "NPCI Unified Agent Protocol (UAP v1.0)",
+    "FIDO Agent Payments Protocol (AP2)",
+    "Model Context Protocol (MCP 2024-11-05 / StreamableHTTP)"
+  ],
+  "merchant_gateway_url": "http://localhost:8080/mcp",
+  "llms_context_url": "/llms.txt",
+  "mcp_discovery_url": "/.well-known/mcp.json",
+  "autonomous_mandates": {
+    "model": "NPCI UPI Circle / Pre-Funded Double-Entry Ledger",
+    "default_monthly_allowance": "₹15,000.00",
+    "per_transaction_cap": "₹2,000.00",
+    "step_up_2fa_rail": "Razorpay Payment Links / UPI AutoPay"
+  },
+  "supported_capabilities": [
+    "catalog_semantic_search",
+    "multi_turn_bargaining_ladder",
+    "multi_product_cart_sessions",
+    "ai_growth_dynamic_bundling",
+    "zero_click_autonomous_wallet_debit",
+    "human_in_the_loop_step_up_2fa",
+    "realtime_razorpay_settlement_polling",
+    "tenant_cryptographic_vault_pgcrypto"
+  ]
+}

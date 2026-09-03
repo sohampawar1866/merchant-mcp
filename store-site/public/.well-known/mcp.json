@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "soham-store": {
+      "name": "Soham Store Agentic Commerce Gateway",
+      "url": "http://localhost:8080/mcp",
+      "transport": "streamablehttp",
+      "description": "Native Model Context Protocol (MCP) server for catalog discovery, AI upsell bundling, multi-product basket bargaining, and autonomous wallet checkout.",
+      "tools": [
+        "search_catalog",
+        "get_product_details",
+        "find_and_price",
+        "negotiate_offer",
+        "create_cart",
+        "add_to_cart",
+        "remove_from_cart",
+        "view_cart",
+        "negotiate_cart_bundle",
+        "get_upsell_bundle",
+        "get_agent_wallet_balance",
+        "checkout_cart",
+        "create_checkout",
+        "check_order_status"
+      ]
+    }
+  }
+}

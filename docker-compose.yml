@@ -88,5 +88,18 @@ services:
       postgres:
         condition: service_healthy
 
+  store-site:
+    build:
+      context: ./store-site
+      dockerfile: Dockerfile
+    container_name: merchant-mcp-store-site
+    environment:
+      PORT: "3002"
+      MCP_BACKEND_URL: "http://server:8080/mcp"
+    ports:
+      - "3002:3002"
+    depends_on:
+      - server
+
 volumes:
   pgdata:
