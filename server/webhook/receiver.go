@@ -43,19 +43,29 @@ type RazorpayWebhookEvent struct {
 type Receiver struct {
 	pool        *pgxpool.Pool
 	auditLogger *audit.Logger
-	secret      string
 	strictMode  bool
 	passphrase  string
+	mockSecret  string // only used in test environments when pool is nil
 }
 
-// NewReceiver creates a new webhook receiver instance.
-func NewReceiver(pool *pgxpool.Pool, auditLogger *audit.Logger, secret string, strictMode bool, passphrase string) *Receiver {
+// NewReceiver creates a new webhook receiver instance for multi-tenant production.
+func NewReceiver(pool *pgxpool.Pool, auditLogger *audit.Logger, strictMode bool, passphrase string) *Receiver {
 	return &Receiver{
 		pool:        pool,
 		auditLogger: auditLogger,
-		secret:      secret,
 		strictMode:  strictMode,
 		passphrase:  passphrase,
+	}
+}
+
+// NewReceiverForTest creates a receiver with a mock secret for unit tests without a database.
+func NewReceiverForTest(auditLogger *audit.Logger, mockSecret string, strictMode bool, passphrase string) *Receiver {
+	return &Receiver{
+		pool:        nil,
+		auditLogger: auditLogger,
+		strictMode:  strictMode,
+		passphrase:  passphrase,
+		mockSecret:  mockSecret,
 	}
 }
 
@@ -116,19 +126,25 @@ func (rec *Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Resolve Merchant Webhook Secret
-	activeSecret := rec.secret
+	// 3. Resolve Merchant Webhook Secret strictly from Database
+	activeSecret := rec.mockSecret
 	if rec.pool != nil && merchantID != "" {
 		if m, err := db.GetMerchantByID(r.Context(), rec.pool, merchantID, rec.passphrase); err == nil && m.RazorpayWebhookSecret != "" {
 			activeSecret = m.RazorpayWebhookSecret
 		} else {
-			activeSecret = db.GetMerchantSettingString(r.Context(), rec.pool, merchantID, "razorpay_webhook_secret", rec.secret)
+			activeSecret = db.GetMerchantSettingString(r.Context(), rec.pool, merchantID, "razorpay_webhook_secret", "")
 		}
 	}
 
 	activeStrictMode := rec.strictMode
 	if rec.pool != nil && merchantID != "" {
 		activeStrictMode = db.GetMerchantSettingBool(r.Context(), rec.pool, merchantID, "webhook_strict_mode", rec.strictMode)
+	}
+
+	if activeSecret == "" && activeStrictMode {
+		log.Printf("webhook: store '%s' does not have a webhook secret configured in database — rejecting", merchantID)
+		http.Error(w, `{"error":"WEBHOOK_SECRET_NOT_CONFIGURED","message":"Merchant webhook secret is not configured in database"}`, http.StatusUnauthorized)
+		return
 	}
 
 	if activeSecret != "" {

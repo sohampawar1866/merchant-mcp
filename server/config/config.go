@@ -10,11 +10,6 @@ import (
 
 // Config holds all server configuration loaded from environment variables.
 type Config struct {
-	// Razorpay
-	RazorpayKeyID         string
-	RazorpayKeySecret     string
-	RazorpayWebhookSecret string
-
 	// Database
 	DatabaseURL string
 
@@ -88,11 +83,6 @@ func Load() *Config {
 	autoLoadEnv()
 
 	return &Config{
-		// Razorpay
-		RazorpayKeyID:         envStr("RAZORPAY_KEY_ID", ""),
-		RazorpayKeySecret:     envStr("RAZORPAY_KEY_SECRET", ""),
-		RazorpayWebhookSecret: envStr("RAZORPAY_WEBHOOK_SECRET", ""),
-
 		// Database
 		DatabaseURL: envStr("DATABASE_URL", "postgres://agentic:agentic@localhost:5432/agentic_checkout?sslmode=disable"),
 

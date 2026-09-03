@@ -15,7 +15,7 @@ import (
 func TestWebhook_ValidHMACSignature(t *testing.T) {
 	secret := "test_secret_12345"
 	auditLogger := audit.NewLogger(nil, "full")
-	receiver := NewReceiver(nil, auditLogger, secret, true, "test_passphrase")
+	receiver := NewReceiverForTest(auditLogger, secret, true, "test_passphrase")
 
 	payload := []byte(`{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_test_999","order_id":"order_test_999","status":"captured","amount":165000}}}}`)
 
@@ -38,7 +38,7 @@ func TestWebhook_ValidHMACSignature(t *testing.T) {
 func TestWebhook_InvalidHMACSignature_StrictMode(t *testing.T) {
 	secret := "test_secret_12345"
 	auditLogger := audit.NewLogger(nil, "full")
-	receiver := NewReceiver(nil, auditLogger, secret, true, "test_passphrase") // strict mode = true
+	receiver := NewReceiverForTest(auditLogger, secret, true, "test_passphrase") // strict mode = true
 
 	payload := []byte(`{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_bad","order_id":"order_bad","status":"captured","amount":100}}}}`)
 

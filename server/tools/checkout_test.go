@@ -36,7 +36,7 @@ func TestCheckout_SuccessfulCreationAndIdempotency(t *testing.T) {
 
 	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	rzpClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	rzpClient := razorpay.NewClient("", "")
 	cacheInstance, _ := cache.NewCache("")
 
 	checkoutHandler := handleCreateCheckout(pool, rzpClient, cacheInstance, auditLogger, cfg)

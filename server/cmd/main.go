@@ -69,9 +69,9 @@ func main() {
 	}
 
 	auditLogger := audit.NewLogger(pool, cfg.AuditLogLevel)
-	rzpClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	rzpClient := razorpay.NewClient("", "")
 	redisCache, _ := cache.NewCache(cfg.RedisURL)
-	webhookReceiver := webhook.NewReceiver(pool, auditLogger, cfg.RazorpayWebhookSecret, cfg.WebhookStrictMode, cfg.EncryptionPassphrase)
+	webhookReceiver := webhook.NewReceiver(pool, auditLogger, cfg.WebhookStrictMode, cfg.EncryptionPassphrase)
 
 	// Initialize MCP Server
 	s := server.NewMCPServer(

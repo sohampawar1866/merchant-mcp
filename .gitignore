@@ -3,6 +3,7 @@
 /cmd
 *.exe
 *.out
+server/bin/
 
 # Environment (Never commit real .env files to git)
 .env

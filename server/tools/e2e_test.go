@@ -43,15 +43,11 @@ func TestE2E_CompleteAgentCommerceJourney(t *testing.T) {
 
 	cfg := config.Load()
 	auditLogger := audit.NewLogger(pool, "full")
-	rzpClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	rzpClient := razorpay.NewClient("", "")
 	cacheInstance, _ := cache.NewCache("")
 	webhookSecret := "e2e_webhook_secret_key"
 	_ = db.UpdateStoreSetting(ctx, pool, "razorpay_webhook_secret", webhookSecret)
-	if cfg.RazorpayKeyID != "" {
-		_ = db.UpdateStoreSetting(ctx, pool, "razorpay_key_id", cfg.RazorpayKeyID)
-		_ = db.UpdateStoreSetting(ctx, pool, "razorpay_key_secret", cfg.RazorpayKeySecret)
-	}
-	webhookReceiver := webhook.NewReceiver(pool, auditLogger, webhookSecret, true, cfg.EncryptionPassphrase)
+	webhookReceiver := webhook.NewReceiver(pool, auditLogger, true, cfg.EncryptionPassphrase)
 
 	findAndPriceHandler := handleFindAndPrice(pool, auditLogger, cfg)
 	getDetailsHandler := handleGetProductDetails(pool, auditLogger, cfg)

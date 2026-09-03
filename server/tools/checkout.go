@@ -265,10 +265,25 @@ func handleCreateCheckout(
 		keyID := merchant.RazorpayKeyID
 		keySecret := merchant.RazorpayKeySecret
 		if keyID == "" {
-			keyID = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_id", cfg.RazorpayKeyID)
+			keyID = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_id", "")
 		}
 		if keySecret == "" {
-			keySecret = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_secret", cfg.RazorpayKeySecret)
+			keySecret = db.GetMerchantSettingString(ctx, pool, merchant.ID, "razorpay_key_secret", "")
+		}
+
+		if keyID == "" || keySecret == "" {
+			errOutput := fmt.Sprintf("store '%s' does not have active Razorpay credentials configured in database", merchant.Name)
+			_ = auditLogger.Log(ctx, audit.Entry{
+				MerchantID:    merchant.ID,
+				CorrelationID: correlationID,
+				ToolName:      "create_checkout",
+				Input:         inputArgs,
+				Decision:      "rejected",
+				ReasonCode:    "MERCHANT_CREDENTIALS_MISSING",
+				ErrorMessage:  errOutput,
+				DurationMs:    time.Since(start).Milliseconds(),
+			})
+			return mcp.NewToolResultError(errOutput), nil
 		}
 
 		deliveryMode := db.GetMerchantSettingString(ctx, pool, merchant.ID, "checkout_delivery_mode", cfg.CheckoutDeliveryMode)

@@ -450,6 +450,10 @@ func handleCheckoutCart(
 			CallbackMethod: "get",
 		}
 
+		if merchant.RazorpayKeyID == "" || merchant.RazorpayKeySecret == "" {
+			return mcp.NewToolResultError(fmt.Sprintf("store '%s' does not have active Razorpay credentials configured in database", merchant.Name)), nil
+		}
+
 		linkResp, err := rzpClient.CreatePaymentLinkWithAuth(ctx, linkReq, merchant.RazorpayKeyID, merchant.RazorpayKeySecret)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("razorpay payment link creation failed: %v", err)), nil

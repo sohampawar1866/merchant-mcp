@@ -2,19 +2,19 @@ package razorpay
 
 import (
 	"context"
+	"os"
 	"testing"
-
-	"github.com/sohampawar1866/merchant-mcp/server/config"
 )
 
 func TestRazorpay_LiveAPITestMode(t *testing.T) {
-	cfg := config.Load()
-	if cfg.RazorpayKeyID == "" || cfg.RazorpayKeySecret == "" {
+	keyID := os.Getenv("RAZORPAY_KEY_ID")
+	keySecret := os.Getenv("RAZORPAY_KEY_SECRET")
+	if keyID == "" || keySecret == "" {
 		t.Skip("Razorpay credentials not set, skipping live API test")
 		return
 	}
 
-	client := NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	client := NewClient(keyID, keySecret)
 	ctx := context.Background()
 
 	// 1. Test live test-mode Order creation
