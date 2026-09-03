@@ -92,7 +92,7 @@ services:
     build:
       context: ./customer-upi-app
       dockerfile: Dockerfile
-    container_name: merchant-mcp-customer-upi-app
+    container_name: customer-upi-app-simulation
     environment:
       DATABASE_URL: postgres://agentic:agentic@postgres:5432/agentic_checkout?sslmode=disable
       PORT: "3002"
