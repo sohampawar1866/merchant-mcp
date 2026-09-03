@@ -94,8 +94,18 @@
               <input type="number" id="port" value="8080" min="1024" max="65535" />
             </div>
             <div class="field-group">
-              <label>Dashboard Port</label>
+              <label>Merchant Dashboard</label>
               <input type="text" value="3000" disabled class="input-disabled" />
+            </div>
+          </div>
+          <div class="grid-2 mt-2">
+            <div class="field-group">
+              <label>Customer UPI App (Simulator)</label>
+              <input type="text" value="3002" disabled class="input-disabled" />
+            </div>
+            <div class="field-group">
+              <label>Platform Admin Dashboard</label>
+              <input type="text" value="3001" disabled class="input-disabled" />
             </div>
           </div>
         </div>
@@ -132,10 +142,16 @@
         <div class="success-icon">✓</div>
         <div>
           <h3 class="success-title">Storefront Active & Guarded</h3>
-          <p class="success-desc">Next.js Merchant Plane & Go MCP Gateway running successfully.</p>
-          <div class="success-actions mt-3">
+          <p class="success-desc">All 6 services running: Go MCP Gateway, Merchant Control Plane, Platform Admin, and Customer UPI Simulator.</p>
+          <div class="success-actions mt-3" style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button type="button" id="openDashboardBtn" class="open-btn">
-              Open Dashboard (localhost:3000) ↗
+              Merchant Dashboard (:3000) ↗
+            </button>
+            <button type="button" id="openUpiBtn" class="open-btn" style="background: #0284c7; border-color: #38bdf8;">
+              Customer UPI App (:3002) ↗
+            </button>
+            <button type="button" id="openAdminBtn" class="open-btn" style="background: #4f46e5; border-color: #818cf8;">
+              Platform Admin (:3001) ↗
             </button>
           </div>
         </div>

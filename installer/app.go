@@ -302,12 +302,26 @@ PORT=%s
 	}
 
 	wailsRuntime.EventsEmit(a.ctx, "log", "✓ All services started successfully!")
+	wailsRuntime.EventsEmit(a.ctx, "log", "  - Merchant Control Plane: http://localhost:3000")
+	wailsRuntime.EventsEmit(a.ctx, "log", "  - Platform Admin:        http://localhost:3001")
+	wailsRuntime.EventsEmit(a.ctx, "log", "  - Customer UPI App:      http://localhost:3002")
+	wailsRuntime.EventsEmit(a.ctx, "log", fmt.Sprintf("  - Go MCP Commerce Core:  http://localhost:%s/mcp", port))
 	return LaunchResult{Success: true}
 }
 
 // OpenDashboard opens the merchant dashboard in the browser
 func (a *App) OpenDashboard() {
 	openBrowser("http://localhost:3000")
+}
+
+// OpenCustomerUPIApp opens the Customer UPI Circle phone simulator
+func (a *App) OpenCustomerUPIApp() {
+	openBrowser("http://localhost:3002")
+}
+
+// OpenAdminDashboard opens the Platform Admin control center
+func (a *App) OpenAdminDashboard() {
+	openBrowser("http://localhost:3001")
 }
 
 // GetOS returns the current operating system for OS-specific UI hints

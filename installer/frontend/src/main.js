@@ -21,6 +21,8 @@ const logTerminal = document.getElementById('logTerminal');
 const toggleLogsBtn = document.getElementById('toggleLogsBtn');
 const successCard = document.getElementById('successCard');
 const openDashboardBtn = document.getElementById('openDashboardBtn');
+const openUpiBtn = document.getElementById('openUpiBtn');
+const openAdminBtn = document.getElementById('openAdminBtn');
 
 // Password Visibility Toggle
 toggleSecretBtn.addEventListener('click', () => {
@@ -50,6 +52,28 @@ openDashboardBtn.addEventListener('click', () => {
     window.open('http://localhost:3000', '_blank');
   }
 });
+
+// Open Customer UPI App Simulator
+if (openUpiBtn) {
+  openUpiBtn.addEventListener('click', () => {
+    if (window.go?.main?.App?.OpenCustomerUPIApp) {
+      window.go.main.App.OpenCustomerUPIApp();
+    } else {
+      window.open('http://localhost:3002', '_blank');
+    }
+  });
+}
+
+// Open Platform Admin Dashboard
+if (openAdminBtn) {
+  openAdminBtn.addEventListener('click', () => {
+    if (window.go?.main?.App?.OpenAdminDashboard) {
+      window.go.main.App.OpenAdminDashboard();
+    } else {
+      window.open('http://localhost:3001', '_blank');
+    }
+  });
+}
 
 // Clear Logs
 toggleLogsBtn.addEventListener('click', () => {
