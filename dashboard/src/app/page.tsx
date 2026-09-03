@@ -13,6 +13,7 @@ import {
   Store,
   ArrowRight,
   AlertCircle,
+  Smartphone,
 } from 'lucide-react';
 import { OverviewTab } from '@/components/OverviewTab';
 import { AuditTrailTab } from '@/components/AuditTrailTab';
@@ -213,6 +214,17 @@ function DashboardContent() {
 
           {/* Right Actions & Status */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <a
+              href="http://localhost:3002"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold tracking-wider uppercase transition shadow-sm"
+              title="Open Customer UPI Circle Simulator (Port 3002) in a new window for split-screen demo"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Customer UPI App (:3002)</span>
+            </a>
+
             <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-figma-lime text-figma-ink border border-black/15 text-[11px] font-mono tracking-wider uppercase font-bold select-none">
               <Zap className="w-3 h-3 fill-figma-ink" />
               <span>ONLINE</span>
