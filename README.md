@@ -7,7 +7,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14_App_Router-black.svg?logo=next.js)](https://nextjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_Multi--Tenant-336791.svg?logo=postgresql)](https://postgresql.org)
 [![MCP Protocol](https://img.shields.io/badge/MCP-StreamableHTTP_%26_SSE-green.svg)](https://modelcontextprotocol.io)
-[![Desktop App](https://img.shields.io/badge/Wails_v2-macOS_%7C_Windows_%7C_Linux-red.svg)](https://wails.io)
+[![Desktop Control Center](https://img.shields.io/badge/Wails_v2-macOS_%7C_Windows_%7C_Linux-red.svg)](https://wails.io)
 
 ---
 
@@ -15,9 +15,67 @@
 
 **AgenticCheckout** is an enterprise-grade, high-performance **Unified Agentic Commerce Gateway powered by Razorpay**. It bridges the gap between **autonomous buyer AI agents** (Claude, ChatGPT, Cursor) and **real-world merchant economics**.
 
-While traditional e-commerce relies on human clicks and form fills, AI agents require programmatic, low-latency, deterministic interfaces. However, granting AI bots unfettered access to raw APIs introduces catastrophic risks: **uncontrolled discount bleeding**, **inventory starvation**, and **regulatory non-compliance with Reserve Bank of India (RBI) payment mandates**.
+While traditional e-commerce relies on human clicks and manual form filling, AI buyer agents require programmatic, low-latency, deterministic interfaces. However, granting AI bots unfettered access to raw APIs introduces catastrophic risks: **uncontrolled discount bleeding**, **inventory starvation**, and **regulatory non-compliance with Reserve Bank of India (RBI) payment mandates**.
 
 AgenticCheckout solves this with a **Unified Model Context Protocol (MCP) Commerce Engine**, backed by **real-time margin defense**, **NPCI UPI Circle delegated secondary authorization**, and **Razorpay Step-Up 2FA with automatic redirect loops**.
+
+---
+
+### 🧩 The Four Core Dilemmas Solved
+
+1. **The Merchant Dilemma (Margin Protection)**: Merchants cannot open raw APIs to autonomous buyer bots without risking rapid margin erosion (uncontrolled discounting) or inventory exhaustion. Our Go engine mathematically enforces private floor prices.
+2. **The Customer Dilemma (Regulatory Compliance & Trust)**: In India, RBI strictly mandates Additional Factor of Authentication (2FA). An AI cannot hold raw credit cards or guess OTPs. Autonomous micro-spending requires a legally compliant delegation framework (**NPCI UPI Circle**).
+3. **The Multi-Merchant Scale Dilemma (No 500 Connectors)**: A customer will *never* add separate MCP configurations for every merchant. Our platform acts as a **Single Unified Gateway**: customers connect **ONCE**, and get access to all registered merchants with category-partitioned search in $< 0.3$ms.
+4. **The Broken Chat Payment Loop Dilemma (Instant Receipt Redirect)**: Instead of the customer paying in a browser tab and awkwardly asking the AI *"Did it go through?"*, our Razorpay integration uses **Automated Callback Redirects (`callback_url`)** that instantly drop the customer on an official confirmed tax invoice page upon payment.
+
+---
+
+## 🏛️ The Three System Planes
+
+The architecture is strictly separated into three decoupled components:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        1. CUSTOMER APPS & AGENT RUNTIMES                               │
+│                                                                                        │
+│  [ Customer UPI Circle App Simulator ]           [ Autonomous Buyer AI Agent ]         │
+│  • Standalone Container (:3002)                  • Claude / ChatGPT (Unified MCP SSE)  │
+│  • Folder: /customer-upi-app/                    • Connects ONCE to Gateway            │
+│  • Account: Soham Pawar (State Bank of India)    • Searches, builds carts, negotiates  │
+│  • Delegated Agent: claude-buyer-01              • Autonomous Fast-Path or Escalates   │
+│  • Monthly Allowance: ₹15,000                    • to Razorpay Step-Up 2FA             │
+│  • Interactive Cap Slider: [ ₹2,000 ]                                                  │
+└───────────────────────────┬───────────────────────────────────┬────────────────────────┘
+                            │                                   │
+                Delegates spending bounds           Executes MCP Tool Calls
+                            │                                   │
+                            ▼                                   ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        2. UNIFIED AGENTIC COMMERCE GATEWAY                             │
+│                                                                                        │
+│  [ Go MCP Engine (:8080) ]                        [ PostgreSQL Multi-Tenant DB ]       │
+│  • 14 Interactive Commerce Tools                 • Category-Indexed Search (< 5ms)     │
+│  • Dynamic Floor Margin Defense Engine           • Integer Paise Cart GST Arithmetic   │
+│  • AI Growth Bundle Concession Engine            • ACID Double-Entry Wallet Ledger     │
+│  • Razorpay Client & Webhook Verifier            • Multi-Merchant Tenant Partitioning  │
+└───────────────────────────┬───────────────────────────────────┬────────────────────────┘
+                            │                                   │
+                Receives order telemetry            Settles transactions via
+                            │                       Razorpay API & Webhooks
+                            ▼                                   ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        3. MERCHANT & FINANCIAL RAILS                                   │
+│                                                                                        │
+│  [ Merchant Control Plane (:3000) ]              [ Razorpay Financial Rails ]          │
+│  • Store Overview & 100% Margin Defense          • POST /v1/payment_links              │
+│  • Plain-English Live Activity Stream            • Automatic callback_url Redirect     │
+│  • Dynamic AI Growth Campaign Studio             • Instant payment.captured Webhooks   │
+│  • Live Catalog & AI Auto-Tagger                 • T+1 Verified Bank Settlement        │
+│                                                                                        │
+│  [ Platform Admin Dashboard (:3001) ]            [ Redis 7 Distributed Cache (:6380) ] │
+│  • Multi-Store Fleet Overview & Kill Switch      • Ephemeral Session Caching           │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -26,14 +84,14 @@ AgenticCheckout solves this with a **Unified Model Context Protocol (MCP) Commer
 ### 1. Unified Single-Gateway Architecture
 * **No "500 Connectors"**: Customers and AI agents connect **ONCE** to the AgenticCheckout Gateway (`http://localhost:8080/mcp`).
 * **Multi-Tenant Catalog Partitioning**: The Gateway dynamically routes requests across registered stores while strictly enforcing tenant isolation and floor price confidentiality.
-* **Sub-Millisecond Indexing**: PostgreSQL composite indexes achieve **0.20ms average query latency** (over $25\times$ faster than our 5ms SLA).
+* **Sub-Millisecond Indexing**: PostgreSQL composite indexes achieve **`0.28ms` average query latency** (over $17\times$ faster than our 5ms SLA).
 
 ### 2. Dual-Rail Payment Execution
 * **Rail A: Autonomous Fast-Path (NPCI UPI Circle)**:
-  * Users delegate an approved monthly allowance (e.g., ₹15,000) and an adjustable per-transaction auto-approval cap (e.g., ₹2,000) to their trusted AI agent (`claude-buyer-01`).
+  * Users delegate an approved monthly allowance (e.g. ₹15,000) and an adjustable per-transaction auto-approval cap (e.g. ₹2,000) to their trusted AI agent (`claude-buyer-01`).
   * Micro-purchases under the cap execute **autonomously with zero human clicks** via ACID double-entry ledger debits in PostgreSQL.
 * **Rail B: Razorpay Step-Up 2FA (High-Value Purchases)**:
-  * If a basket exceeds the per-transaction cap (e.g., ₹12,999 4K Projector), the engine blocks autonomous debit and generates a secure Razorpay Payment Link with RBI-compliant 2FA (UPI MPIN / OTP).
+  * If a basket exceeds the per-transaction cap (e.g. ₹12,999 4K Projector), the engine blocks autonomous debit and generates a secure Razorpay Payment Link with RBI-compliant 2FA (UPI MPIN / OTP).
   * **Automated Callback Redirect (`callback_url`)**: The moment payment captures, Razorpay instantly redirects the browser to `/order/success`, eliminating manual chat polling.
 
 ### 3. Mathematical Margin & Floor Price Defense
@@ -45,61 +103,95 @@ AgenticCheckout solves this with a **Unified Model Context Protocol (MCP) Commer
 * AI agents receive structured **ASCII Box Invoices**, **Markdown Receipts**, and **BlueDart courier tracking codes**.
 * Printable PDF-ready GST Tax Invoice page at `/order/success`.
 
+### 5. High-Performance Multi-Merchant Search
+* **The Problem**: Calling an MCP tool per merchant creates $O(N)$ network latency (taking up to 30 seconds for 50 stores).
+* **The Solution**: The agent makes **ONE** tool call: `search_products(query: "earbuds", category: "Audio")`.
+* **Execution**: Stores selling unrelated categories are eliminated in **0.1ms**. The database returns top matches across relevant merchants in **`0.28ms`**.
+
 ---
 
-## 🏛️ Live System Topology
+## 🔄 End-to-End Userflows
 
-The platform runs as a coordinated 6-service Docker stack:
+### Phase A: Day 0 Setup (One-Time Configuration)
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        1. CUSTOMER & BUYER RUNTIMES                                    │
-│                                                                                        │
-│  [ Customer UPI Circle App Simulator ]           [ Autonomous Buyer AI Agent ]         │
-│  • Port 3002 (Next.js Phone Mockup)              • Claude Desktop / Cursor / ChatGPT   │
-│  • SBI Account: soham@oksbi                      • Single Gateway Connection           │
-│  • Live Cap Slider (₹500 - ₹5,000)               • Discovers, Carts, Negotiates        │
-│  • Fast-Path vs Step-Up 2FA Triggers             • Bounded Autonomous Spending         │
-└───────────────────────────┬───────────────────────────────────┬────────────────────────┘
-                            │                                   │
-                Delegated Spending Bounds               MCP Tool Calls (:8080)
-                            │                                   │
-                            ▼                                   ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        2. UNIFIED AGENTIC COMMERCE GATEWAY                             │
-│                                                                                        │
-│  [ Go MCP Engine (:8080) ]                        [ PostgreSQL 16 DB (:5433) ]         │
-│  • 14 Interactive Commerce Tools                 • Category-Indexed Search (0.20ms)    │
-│  • Margin & Dynamic Pricing Engine               • Integer Paise GST Arithmetic        │
-│  • Razorpay Client & Webhooks                    • ACID Double-Entry Ledger            │
-│  • StreamableHTTP & SSE Transports               • Multi-Tenant Schema Partitioning    │
-└───────────────────────────┬───────────────────────────────────┬────────────────────────┘
-                            │                                   │
-                Order Telemetry Stream                  Payment Links & Webhooks
-                            │                                   │
-                            ▼                                   ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        3. MERCHANT & FINANCIAL RAILS                                   │
-│                                                                                        │
-│  [ Merchant Control Plane (:3000) ]              [ Razorpay Financial Rails ]          │
-│  • Live Telemetry Stream                         • POST /v1/payment_links              │
-│  • 100% Margin Defense & Overrides               • Automatic callback_url Redirect     │
-│  • AI Growth Campaign Studio                     • Instant payment.captured Webhook    │
-│  • Printable GST Tax Invoices                    • T+1 Verified Bank Settlement        │
-│                                                                                        │
-│  [ Platform Admin Dashboard (:3001) ]            [ Redis 7 Cache (:6380) ]             │
-│  • Multi-Store Fleet Overview                    • Ephemeral Session Caching           │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-```
+#### 1. Merchant Onboarding (`http://localhost:3000/onboard`)
+* Merchant registers their store (*Soham Gadgets*).
+* Plugs in **Razorpay Key ID & Key Secret** for direct bank settlements (encrypted using AES-256 in PostgreSQL).
+* Sets public MRPs and **Private Secret Floor Prices** (e.g. Laptop Stand = ₹899 MRP, ₹750 Floor).
+* Configures **AI Growth Campaigns** (e.g. *Power Duo*: 15% off combo bundle).
 
-| Service | Container Name | Port | Description |
-|---|---|---|---|
-| **Customer UPI App** | `customer-upi-app-simulation` | `3002` | Interactive smartphone simulator for NPCI UPI Circle delegation |
-| **Merchant Control Plane** | `merchant-mcp-dashboard` | `3000` | Merchant store dashboard, margin defense, and tax invoice viewer |
-| **Platform Admin** | `merchant-mcp-admin-dashboard` | `3001` | Multi-merchant tenant fleet management & security overview |
-| **Go MCP Gateway** | `merchant-mcp-server` | `8080` | High-performance Go MCP engine running StreamableHTTP & SSE |
-| **PostgreSQL 16** | `merchant-mcp-postgres` | `5433` | Canonical relational database with ACID double-entry ledger |
-| **Redis 7** | `merchant-mcp-redis` | `6380` | High-throughput distributed cache and rate limiter |
+#### 2. Customer UPI Circle Delegation (`http://localhost:3002`)
+* Customer opens the **Customer UPI Circle Simulator** (styled like Google Pay / PhonePe smartphone mockup).
+* Selects **"Delegate AI Agent"** and assigns `claude-buyer-01`.
+* Sets **Monthly Budget**: ₹15,000.
+* Sets **Zero-Click Auto-Debit Cap**: ₹2,000 (purchases under this amount do not require an MPIN).
+* Authorizes the mandate with biometric / MPIN **once**.
+
+---
+
+### Phase B: Day 1..N Daily Usage
+
+#### Flow 1: Micro-Purchase ($\le$ ₹2,000) — Zero-Click Fast Path
+*(Example: Customer asks Claude to buy the Laptop Stand + Desk Mat bundle for ₹1,783)*
+
+1. **Discovery & Bundle Recommendation**:
+   * Agent calls `search_products("laptop stand")` $\rightarrow$ Server returns ₹899 stand.
+   * Agent calls `get_upsell_bundle` $\rightarrow$ Server dynamically proposes the *Power Duo Bundle* (Stand + RGB Desk Mat with 15% discount).
+2. **Session Cart & Margin Defense**:
+   * Agent calls `create_cart` and `add_to_cart`. Subtotal: ₹2,098.
+   * Agent calls `negotiate_cart_bundle(offered_price: 178000)`.
+   * Go engine checks combined secret floors (₹1,650). ₹1,780 is safely above floor!
+   * Approves concession in integer paise: Final total = ₹1,783.
+3. **Zero-Click Settlement**:
+   * Agent calls `checkout_cart(payment_method: "autonomous_wallet")`.
+   * ₹1,783 is $\le$ ₹2,000 auto-cap $\rightarrow$ Atomic PostgreSQL `SELECT ... FOR UPDATE` row lock.
+   * Balance deducts in real-time (`agent_wallet_ledger`). Order status set to `paid`.
+4. **Real-Time Visibility**:
+   * Customer's UPI App updates: *"-₹1,783 debited for Soham Gadgets Power Duo"*.
+   * Merchant Dashboard rings up the sale with 0% margin leakage.
+
+---
+
+#### Flow 2: High-Value Purchase (> ₹2,000) — Razorpay Step-Up 2FA & Auto-Redirect
+*(Example: Customer asks Claude to buy the AeroBeam 4K Projector for ₹12,999)*
+
+1. **Cap Escalation**:
+   * Agent calls `checkout_cart(product_id: Projector, price: ₹12,999)`.
+   * Gateway detects: ₹12,999 exceeds the ₹2,000 auto-debit cap!
+2. **Live Razorpay Link with Callback URL**:
+   * Gateway calls Razorpay API:
+     ```json
+     POST /v1/payment_links
+     {
+       "amount": 1299900,
+       "currency": "INR",
+       "callback_url": "http://localhost:3000/order/success?order_id=ord_xxx",
+       "callback_method": "get"
+     }
+     ```
+   * Razorpay returns: `https://rzp.io/i/xxxxxx`.
+3. **Seamless Human Authorization & Zero-Polling UX**:
+   * Agent shares the link: *"Exceeds your ₹2,000 limit. Please authorize: [Pay ₹12,999 via Razorpay](https://rzp.io/i/xxxxxx)"*
+   * Customer enters their UPI PIN in the Razorpay checkout.
+   * **The Instant Payment Completes:** Razorpay **automatically redirects the browser** directly to `http://localhost:3000/order/success?order_id=ord_xxx`.
+   * **No manual polling needed!** The customer sees their verified GST tax invoice on screen instantly.
+4. **Webhook Capture**:
+   * Razorpay fires background webhook (`payment.captured`) to `/api/webhook/razorpay`.
+   * Merchant Dashboard updates in real time; merchant ships the order.
+
+---
+
+## 📦 Active Repository Modules
+
+| Module | Path | Description |
+|---|---|---|
+| **MCP Commerce Gateway** | [`server/`](file:///Volumes/MyData/merchant-mcp/server/) | High-performance Go MCP engine exposing 14 tools over StreamableHTTP & SSE |
+| **Customer UPI App Simulator** | [`customer-upi-app/`](file:///Volumes/MyData/merchant-mcp/customer-upi-app/) | Dedicated Next.js smartphone UI on port `:3002` (NPCI UPI Circle delegation) |
+| **Merchant Control Plane** | [`dashboard/`](file:///Volumes/MyData/merchant-mcp/dashboard/) | Next.js 14 Merchant Dashboard on port `:3000` (Margin Defense & Invoices) |
+| **Platform Admin Center** | [`admin-dashboard/`](file:///Volumes/MyData/merchant-mcp/admin-dashboard/) | Fleet monitoring, cross-tenant auditing & platform settings on port `:3001` |
+| **Desktop Control Center** | [`desktop-manager/`](file:///Volumes/MyData/merchant-mcp/desktop-manager/) | Native Wails v2 GUI application with cross-platform builds (macOS, Windows, Linux) |
+| **Database Schema** | [`server/db/migrations/`](file:///Volumes/MyData/merchant-mcp/server/db/migrations/) | Consolidated canonical idempotent PostgreSQL schema with double-entry ledger |
+| **Containerization** | [`docker-compose.yml`](file:///Volumes/MyData/merchant-mcp/docker-compose.yml) | Production 6-container topology with health checks and volume persistence |
 
 ---
 
@@ -128,10 +220,9 @@ Open your browser:
 * **Merchant Store Control Plane**: [`http://localhost:3000`](http://localhost:3000)
 * **Platform Admin Dashboard**: [`http://localhost:3001`](http://localhost:3001)
 * **Open Agent Manifest**: [`http://localhost:8080/.well-known/agent-manifest.json`](http://localhost:8080/.well-known/agent-manifest.json)
+* **Go MCP Gateway**: [`http://localhost:8080/mcp`](http://localhost:8080/mcp)
 
 ---
-
-### Option 2: Desktop 1-Click Installer (macOS, Windows, Linux)
 
 ### Option 2: Desktop Control Center (macOS, Windows, Linux)
 
