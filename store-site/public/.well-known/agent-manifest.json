@@ -1,15 +1,16 @@
 {
   "schema_version": "2026-03-01",
-  "store_name": "Soham Store",
+  "store_name": "Soham Gadgets",
+  "domain": "https://soham-gadgets.vercel.app",
   "platform": "AgenticCheckout Autonomous Commerce Clearinghouse",
   "protocol_compliance": [
     "NPCI Unified Agent Protocol (UAP v1.0)",
     "FIDO Agent Payments Protocol (AP2)",
     "Model Context Protocol (MCP 2024-11-05 / StreamableHTTP)"
   ],
-  "merchant_gateway_url": "http://localhost:8080/mcp",
-  "llms_context_url": "/llms.txt",
-  "mcp_discovery_url": "/.well-known/mcp.json",
+  "merchant_gateway_url": "https://soham-gadgets.vercel.app/api/mcp",
+  "llms_context_url": "https://soham-gadgets.vercel.app/llms.txt",
+  "mcp_discovery_url": "https://soham-gadgets.vercel.app/.well-known/mcp.json",
   "autonomous_mandates": {
     "model": "NPCI UPI Circle / Pre-Funded Double-Entry Ledger",
     "default_monthly_allowance": "₹15,000.00",

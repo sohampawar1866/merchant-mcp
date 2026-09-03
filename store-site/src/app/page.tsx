@@ -20,7 +20,7 @@ const PRODUCTS = [
   {
     id: '78f9d6a3-a321-450b-8a7f-b7224c172c03',
     name: 'ErgoLift Aluminum Laptop Stand',
-    category: 'Desk Accessories',
+    category: 'Desk Gadgets',
     priceINR: '₹899.00',
     pricePaise: 89900,
     rating: 4.9,
@@ -32,7 +32,7 @@ const PRODUCTS = [
   {
     id: '93fdee4b-6308-4d7c-9e79-e3d3f6082977',
     name: 'DeskGlow RGB Gaming Desk Mat',
-    category: 'Desk Accessories',
+    category: 'Desk Gadgets',
     priceINR: '₹1,199.00',
     pricePaise: 119900,
     rating: 4.8,
@@ -44,7 +44,7 @@ const PRODUCTS = [
   {
     id: '21a7288c-a939-4efd-becb-c9d81394f64d',
     name: 'AirBass X2 Pro Wireless Earbuds',
-    category: 'Audio',
+    category: 'Audio & Acoustics',
     priceINR: '₹1,799.00',
     pricePaise: 179900,
     rating: 4.7,
@@ -56,7 +56,7 @@ const PRODUCTS = [
   {
     id: '5cdc6b33-1e3a-430f-83b1-900508b03877',
     name: 'AeroBeam 4K Portable Projector',
-    category: 'Smart Home',
+    category: 'Smart Home & Display',
     priceINR: '₹12,999.00',
     pricePaise: 1299900,
     rating: 5.0,
@@ -71,7 +71,8 @@ export default function StorefrontPage() {
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
 
   const copyURL = (path: string) => {
-    const full = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://soham-gadgets.vercel.app';
+    const full = `${base}${path}`;
     navigator.clipboard.writeText(full);
     setCopiedFile(path);
     setTimeout(() => setCopiedFile(null), 2500);
@@ -103,11 +104,11 @@ export default function StorefrontPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              S
+              ⚡
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-none tracking-tight">Soham Store</h1>
-              <p className="text-[11px] text-zinc-500 font-mono mt-0.5">Lifestyle & Tech Gear</p>
+              <h1 className="font-bold text-lg leading-none tracking-tight">Soham Gadgets</h1>
+              <p className="text-[11px] text-zinc-500 font-mono mt-0.5">Tech, Workspace & Audio Gear</p>
             </div>
           </div>
 
@@ -139,7 +140,7 @@ export default function StorefrontPage() {
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-              The First Storefront Built for Both <span className="text-emerald-400">Humans & AI Buyers</span>.
+              The Next-Gen Gadget Store for <span className="text-emerald-400">Humans & AI Buyers</span>.
             </h2>
 
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
@@ -203,10 +204,10 @@ export default function StorefrontPage() {
       <main className="px-4 sm:px-6 max-w-7xl mx-auto w-full flex-1 mb-16">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-2xl font-bold tracking-tight text-zinc-950">Product Catalog</h3>
+            <h3 className="text-2xl font-bold tracking-tight text-zinc-950">Featured Gadgets</h3>
             <p className="text-xs text-zinc-500 mt-1 font-mono">Real-time inventory connected to Razorpay Settlement rails</p>
           </div>
-          <span className="text-xs font-mono text-zinc-400">{PRODUCTS.length} products available</span>
+          <span className="text-xs font-mono text-zinc-400">{PRODUCTS.length} gadgets available</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -264,7 +265,7 @@ export default function StorefrontPage() {
               <div className="w-8 h-8 rounded-xl bg-zinc-950 text-white flex items-center justify-center font-bold text-sm">1</div>
               <h4 className="font-bold text-zinc-900">Tell Your AI Assistant</h4>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Provide this website URL or store name to Claude, ChatGPT, or your local agent: <em>"Find me the laptop stand on Soham Store."</em>
+                Provide this website URL to Claude, ChatGPT, or your local agent: <em>"Find me the laptop stand on https://soham-gadgets.vercel.app."</em>
               </p>
             </div>
 
@@ -291,7 +292,7 @@ export default function StorefrontPage() {
       <footer className="bg-zinc-950 text-zinc-400 text-xs py-8 px-4 sm:px-6 border-t border-zinc-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-white">Soham Store</span>
+            <span className="font-bold text-white">Soham Gadgets</span>
             <span>•</span>
             <span>Powered by AgenticCheckout & Razorpay</span>
           </div>

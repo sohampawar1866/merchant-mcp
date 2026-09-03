@@ -1,11 +1,13 @@
-# Soham Store — Lifestyle & Tech Accessories (AI Agent Ready)
+# Soham Gadgets — Tech & Workspace Gear (AI Agent Ready)
 
 > Autonomous Agentic Commerce Storefront powered by AgenticCheckout and Razorpay.
+> Live Website: https://soham-gadgets.vercel.app/
 > This store natively supports AI Buyers, dynamic cross-sell bundle discounts, and instant zero-click autonomous wallet settlements.
 
 ## Store Overview
-- **Store Name**: Soham Store
-- **Categories**: Desk Accessories, Audio & Gadgets, Smart Home, Wearables
+- **Store Name**: Soham Gadgets
+- **Domain**: https://soham-gadgets.vercel.app
+- **Categories**: Desk Gadgets, Audio & Acoustics, Smart Home & Display, Wearables
 - **Currency**: INR (₹)
 - **Settlement Rails**: NPCI UPI Circle, Delegated Agent Wallets, Razorpay Live Payment Links
 
@@ -19,7 +21,7 @@
 
 ### 1. ErgoLift Aluminum Laptop Stand
 - **Product ID**: `78f9d6a3-a321-450b-8a7f-b7224c172c03`
-- **Category**: Desk Accessories
+- **Category**: Desk Gadgets
 - **List Price**: ₹899.00 (89900 paise)
 - **GST Rate**: 18% (1800 bps)
 - **Stock**: In Stock
@@ -27,7 +29,7 @@
 
 ### 2. DeskGlow RGB Gaming Desk Mat
 - **Product ID**: `93fdee4b-6308-4d7c-9e79-e3d3f6082977`
-- **Category**: Desk Accessories
+- **Category**: Desk Gadgets
 - **List Price**: ₹1,199.00 (119900 paise)
 - **GST Rate**: 18% (1800 bps)
 - **Stock**: In Stock
@@ -35,7 +37,7 @@
 
 ### 3. AirBass X2 Pro Wireless Earbuds
 - **Product ID**: `21a7288c-a939-4efd-becb-c9d81394f64d`
-- **Category**: Audio
+- **Category**: Audio & Acoustics
 - **List Price**: ₹1,799.00 (179900 paise)
 - **GST Rate**: 18% (1800 bps)
 - **Stock**: In Stock
@@ -43,7 +45,7 @@
 
 ### 4. AeroBeam 4K Portable Projector
 - **Product ID**: `5cdc6b33-1e3a-430f-83b1-900508b03877`
-- **Category**: Smart Home
+- **Category**: Smart Home & Display
 - **List Price**: ₹12,999.00 (1299900 paise)
 - **GST Rate**: 18% (1800 bps)
 - **Stock**: In Stock
