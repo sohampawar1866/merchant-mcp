@@ -18,7 +18,7 @@
 
 <br />
 
-[The Core Dilemmas](#the-four-core-dilemmas-solved) • [System Architecture](#the-three-system-planes) • [Live Agentic Flow](#live-agentic-interaction-flow) • [Active Fleet](#active-system-fleet) • [MCP Tools](#mcp-tool-catalog) • [Benchmarks](#performance-benchmarks--sla-verification) • [Quickstart](#quickstart)
+[The Core Dilemmas](#the-four-core-dilemmas-solved) • [System Architecture](#the-three-system-planes) • [Live Agentic Flow](#live-agentic-interaction-flow) • [Active Fleet](#active-system-fleet) • [MCP Tools](#mcp-tool-catalog) • [Benchmarks](#performance-benchmarks--sla-verification) • [Installation](#installation)
 
 </div>
 
@@ -197,13 +197,8 @@ AgenticCheckout includes a native **Wails v2 Desktop Control Center** for 1-clic
 * Allows toggling the **Customer UPI Phone Simulator (`:3002`)** on or off.
 * Provides 1-click access to all local URLs (Merchant Dashboard, Admin Center, Simulator, MCP Gateway, Manifest).
 
-```bash
-cd desktop-manager
-./build-all.sh host    # Builds for current operating system
-./build-all.sh mac     # Builds macOS bundle (.dmg & .zip)
-./build-all.sh windows # Builds Windows executable (.exe & .zip)
-./build-all.sh linux   # Builds Linux binary (.tar.gz)
-```
+> [!TIP]
+> **Pre-Compiled Desktop Apps Available**: Ready-to-run desktop packages for **macOS** (`.dmg`), **Windows** (`.exe`), and **Linux** (`.tar.gz`) can be downloaded directly from the [GitHub Releases](https://github.com/sohampawar1866/merchant-mcp/releases/latest) page.
 
 ---
 
@@ -269,22 +264,72 @@ BenchmarkCategoryPartitionQuery-8: 15,834 ops | 159,668 ns/op (0.16ms / query)
 
 ---
 
-## Quickstart
+## Installation
 
-### Option 1: Docker Compose (Instant 1-Command Setup)
+The easiest and recommended way to install and run the entire AgenticCheckout platform is using **Docker Compose**. All 6 microservices, databases, caching layers, seed catalogs, and dashboards launch automatically in seconds.
 
+### Prerequisites
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS / Windows) or Docker Engine with Compose v2 (Linux) installed and running.
+
+---
+
+### Step 1: Clone the Repository
 ```bash
 git clone https://github.com/sohampawar1866/merchant-mcp.git
 cd merchant-mcp
-docker compose up -d
 ```
 
-Access local endpoints:
-* **Customer UPI App Simulator**: [`http://localhost:3002`](http://localhost:3002)
-* **Merchant Store Control Plane**: [`http://localhost:3000`](http://localhost:3000)
-* **Platform Admin Dashboard**: [`http://localhost:3001`](http://localhost:3001)
-* **Open Agent Manifest**: [`http://localhost:8080/.well-known/agent-manifest.json`](http://localhost:8080/.well-known/agent-manifest.json)
-* **Go MCP Gateway**: [`http://localhost:8080/mcp`](http://localhost:8080/mcp)
+### Step 2: Initialize Environment Configuration
+Copy the provided environment template to `.env`:
+```bash
+cp .env.example .env
+```
+> [!NOTE]
+> The `.env.example` template comes pre-configured with default ports and a secure master passphrase (`ENCRYPTION_PASSPHRASE`) for local development and secret encryption. No manual editing is required to get started.
+
+### Step 3: Start All 6 Platform Services
+Launch the complete multi-container platform in the background:
+```bash
+docker compose up -d
+```
+Docker will initialize and run:
+* `merchant-mcp-postgres` (PostgreSQL 16 with canonical schema & seed data)
+* `merchant-mcp-redis` (Redis 7 ephemeral session cache)
+* `merchant-mcp-server` (Go 1.24 MCP Gateway & Webhook engine)
+* `merchant-mcp-dashboard` (Next.js 14 Merchant Storefront & Margin Shield)
+* `merchant-mcp-admin-dashboard` (Next.js 14 Platform Fleet Admin Center)
+* `customer-upi-app-simulation` (Next.js 14 Customer UPI Phone Simulator)
+
+### Step 4: Verify Deployment Status
+Check that all containers are healthy and running:
+```bash
+docker compose ps
+```
+
+---
+
+### Step 5: Explore the Live Platform
+Once started, all interfaces are immediately accessible in your browser:
+
+| Interface / Service | Local URL | Description |
+|---|:---:|---|
+| **Merchant Storefront & Margin Shield** | [`http://localhost:3000`](http://localhost:3000) | Live store telemetry, real-time margin defense, order activity, and printable GST tax invoices |
+| **Platform Admin Dashboard** | [`http://localhost:3001`](http://localhost:3001) | Multi-tenant fleet management and platform-wide emergency kill switch |
+| **Customer UPI Phone Simulator** | [`http://localhost:3002`](http://localhost:3002) | Interactive smartphone UI for setting delegated agent allowances and UPI Circle caps |
+| **Go MCP Gateway Endpoint** | [`http://localhost:8080/mcp`](http://localhost:8080/mcp) | Production StreamableHTTP & SSE endpoint for Claude Desktop, ChatGPT, or Cursor |
+| **Open Agent Manifest** | [`http://localhost:8080/.well-known/agent-manifest.json`](http://localhost:8080/.well-known/agent-manifest.json) | Machine-readable discovery manifest detailing capabilities and tools |
+
+---
+
+### Stopping the Platform
+To cleanly stop all services:
+```bash
+docker compose down
+```
+To stop all services and wipe database volumes for a fresh reset:
+```bash
+docker compose down -v
+```
 
 ---
 
