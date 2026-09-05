@@ -156,6 +156,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ACTION 2B: UPDATE MONTHLY ALLOWANCE CEILING
+    if (action === 'update_allowance') {
+      const allowancePaise = parseInt(body.allowance_paise, 10);
+      if (isNaN(allowancePaise) || allowancePaise < 100000 || allowancePaise > 5000000) {
+        return NextResponse.json({ error: 'INVALID_ALLOWANCE', message: 'Allowance must be between ₹1,000 and ₹50,000' }, { status: 400 });
+      }
+
+      await pool.query(`
+        UPDATE agent_wallets
+        SET monthly_allowance_paise = $1
+        WHERE id = $2;
+      `, [allowancePaise, wallet.id]);
+
+      return NextResponse.json({
+        success: true,
+        action: 'update_allowance',
+        new_allowance_paise: allowancePaise,
+        new_allowance_inr: (allowancePaise / 100).toFixed(2),
+        message: `Monthly allowance updated to ₹${(allowancePaise / 100).toLocaleString('en-IN')}`,
+      });
+    }
+
     // ACTION 3: SIMULATE AGENT PURCHASE
     if (action === 'simulate_purchase') {
       const amountPaise = parseInt(body.amount_paise, 10);
@@ -189,9 +211,9 @@ export async function POST(request: NextRequest) {
 
       const newBalance = Number(wallet.balance_paise) - amountPaise;
       const newMonthlySpent = Number(wallet.monthly_spent_paise) + amountPaise;
-      const merchantId = 'efe794fa-e1e2-4d30-8f13-cb74b2b5f110'; // Soham Gadgets
+      const merchantId = 'a0000000-0000-0000-0000-000000000001'; // boAt Lifestyle
 
-      // Find product for Soham Gadgets
+      // Find product for boAt Lifestyle
       const prodRes = await pool.query(`
         SELECT id FROM products WHERE merchant_id = $1 LIMIT 1;
       `, [merchantId]);
@@ -217,7 +239,7 @@ export async function POST(request: NextRequest) {
       await pool.query(`
         INSERT INTO agent_wallet_ledger (wallet_id, order_id, entry_type, amount_paise, balance_after_paise, description)
         VALUES ($1, $2, 'DEBIT_PURCHASE', $3, $4, $5);
-      `, [wallet.id, simulatedOrderId, amountPaise, newBalance, `Purchased: ${productName} at Soham Gadgets`]);
+      `, [wallet.id, simulatedOrderId, amountPaise, newBalance, `Purchased: ${productName} at boAt Lifestyle`]);
 
       // Insert audit log for merchant dashboard live activity stream
       await pool.query(`

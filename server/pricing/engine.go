@@ -141,6 +141,8 @@ type BundleEvaluationResult struct {
 	TotalFloorPrice   int                   `json:"total_floor_price"`
 	TotalSavingsPaise int                   `json:"total_savings_paise"`
 	Allocations       []ItemPriceAllocation `json:"allocations,omitempty"`
+	CampaignID        *string               `json:"campaign_id,omitempty"`
+	CampaignName      string                `json:"campaign_name,omitempty"`
 }
 
 // EvaluateBundleOffer evaluates a multi-item bundle proposal deterministically with proportional floor-safe distribution.

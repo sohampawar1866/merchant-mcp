@@ -90,3 +90,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'DB_ERROR', message: error.message }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { merchant_id, name, discount_percent, target_category, min_bundle_items, status } = body;
+
+    if (!merchant_id || !name || !discount_percent) {
+      return NextResponse.json(
+        { error: 'MISSING_FIELDS', message: 'merchant_id, name, and discount_percent are required' },
+        { status: 400 }
+      );
+    }
+
+    const pool = getDbPool();
+    const res = await pool.query(
+      `
+      INSERT INTO merchant_campaigns (merchant_id, name, discount_percent, target_category, min_bundle_items, status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, name, discount_percent, target_category, min_bundle_items, status, created_at;
+    `,
+      [
+        merchant_id,
+        name,
+        Math.min(50, Math.max(1, parseInt(discount_percent, 10))),
+        target_category || 'General',
+        parseInt(min_bundle_items || '2', 10),
+        status || 'active',
+      ]
+    );
+
+    return NextResponse.json({
+      success: true,
+      campaign: res.rows[0],
+      message: `Campaign "${name}" launched successfully!`,
+    });
+  } catch (error: any) {
+    console.error('Error creating campaign:', error);
+    return NextResponse.json({ error: 'DB_ERROR', message: error.message }, { status: 500 });
+  }
+}
+

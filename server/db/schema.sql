@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS agent_wallets (
     monthly_allowance_paise   BIGINT NOT NULL DEFAULT 1500000, -- ₹15,000 max monthly
     monthly_spent_paise       BIGINT NOT NULL DEFAULT 0,
     per_transaction_cap_paise INTEGER NOT NULL DEFAULT 200000, -- ₹2,000 per txn auto-approval cap
-    whitelisted_categories    TEXT[] DEFAULT ARRAY['Audio', 'Desk Accessories', 'Smart Home', 'Wearables', 'general'],
+    whitelisted_categories    TEXT[] DEFAULT ARRAY['*'],
     last_reset_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status                    VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'frozen', 'revoked')),
     created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()

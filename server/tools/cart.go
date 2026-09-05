@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -83,10 +84,12 @@ func RegisterCartTools(
 	// 6. checkout_cart
 	checkoutCartTool := mcp.NewTool(
 		"checkout_cart",
-		mcp.WithDescription("Finalizes a multi-product cart and creates an atomic Razorpay Payment Link / Order with itemized receipt notes."),
+		mcp.WithDescription("Finalizes a multi-product cart and settles it. Defaults to autonomous zero-click payment from the buyer agent's delegated wallet when within spending caps, or falls back to creating a Razorpay payment link for manual 2FA confirmation."),
 		mcp.WithString("merchant_api_key", mcp.Description("Merchant API key for authentication")),
 		mcp.WithString("cart_id", mcp.Required(), mcp.Description("UUID of the cart to checkout")),
 		mcp.WithString("idempotency_key", mcp.Required(), mcp.Description("Unique idempotency key to prevent duplicate checkouts")),
+		mcp.WithString("payment_method", mcp.Description("Payment method: 'autonomous_wallet' (default: 0-click autonomous settlement within wallet cap) or 'payment_link' (forces manual human 2FA link)")),
+		mcp.WithString("agent_id", mcp.Description("AI agent ID for delegated wallet settlement (default: 'claude-buyer-01')")),
 		mcp.WithString("customer_phone", mcp.Description("Customer contact phone for payment link notification")),
 		mcp.WithString("customer_email", mcp.Description("Customer email for receipt dispatch")),
 	)
@@ -278,7 +281,58 @@ func handleNegotiateCartBundle(pool *pgxpool.Pool, auditLogger *audit.Logger, cf
 			}
 		}
 
+		// 1. Gather item categories for campaign targeting
+		categories := make([]string, 0, len(currentCart.Items))
+		for _, it := range currentCart.Items {
+			var cat string
+			_ = pool.QueryRow(ctx, `SELECT category FROM products WHERE id = $1;`, it.ProductID).Scan(&cat)
+			if cat != "" {
+				categories = append(categories, strings.ToLower(cat))
+			}
+		}
+
+		// 2. Query active campaigns from PostgreSQL for this merchant matching min_bundle_items and category
+		type cartCampaign struct {
+			ID              uuid.UUID
+			Name            string
+			DiscountPercent int
+			MinBundleItems  int
+		}
+		var activeCampaign *cartCampaign
+
+		cRows, cErr := pool.Query(ctx, `
+			SELECT id, name, discount_percent, min_bundle_items
+			FROM merchant_campaigns
+			WHERE merchant_id = $1
+			  AND status = 'active'
+			  AND starts_at <= NOW()
+			  AND ends_at >= NOW()
+			  AND min_bundle_items <= $2
+			ORDER BY 
+				CASE 
+					WHEN LOWER(target_category) = ANY($3) THEN 1
+					WHEN target_category IS NULL OR target_category = '' OR LOWER(target_category) = 'all' THEN 2
+					ELSE 3
+				END,
+				discount_percent DESC,
+				created_at DESC
+			LIMIT 1;
+		`, merchantUUID, len(currentCart.Items), categories)
+
+		if cErr == nil {
+			defer cRows.Close()
+			if cRows.Next() {
+				var c cartCampaign
+				if err := cRows.Scan(&c.ID, &c.Name, &c.DiscountPercent, &c.MinBundleItems); err == nil {
+					activeCampaign = &c
+				}
+			}
+		}
+
 		maxDiscountPercent := db.GetMerchantSettingInt(ctx, pool, merchant.ID, "max_discount_percent", 20)
+		if activeCampaign != nil && activeCampaign.DiscountPercent > maxDiscountPercent {
+			maxDiscountPercent = activeCampaign.DiscountPercent
+		}
 		requireHumanApproval := db.GetMerchantSettingBool(ctx, pool, merchant.ID, "enable_human_approval", false)
 
 		evalResult := pricing.EvaluateBundleOffer(pricing.BundleEvaluationInput{
@@ -289,6 +343,15 @@ func handleNegotiateCartBundle(pool *pgxpool.Pool, auditLogger *audit.Logger, cf
 			MaxDiscountPercent: maxDiscountPercent,
 			RequireHumanReview: requireHumanApproval,
 		})
+
+		if activeCampaign != nil {
+			campIDStr := activeCampaign.ID.String()
+			evalResult.CampaignID = &campIDStr
+			evalResult.CampaignName = activeCampaign.Name
+			if evalResult.Decision == "approved" {
+				evalResult.ReasonCode = "CAMPAIGN_PROMOTION_APPLIED"
+			}
+		}
 
 		if evalResult.Decision == "approved" {
 			// Apply allocations to cart items in DB
@@ -303,19 +366,25 @@ func handleNegotiateCartBundle(pool *pgxpool.Pool, auditLogger *audit.Logger, cf
 				subtotal, tax, total, cartID)
 		}
 
+		auditInput := map[string]any{
+			"cart_id":               cartIDStr,
+			"proposed_bundle_price": proposedBundlePrice,
+			"attempt_number":        attemptNumber,
+		}
+		if activeCampaign != nil {
+			auditInput["campaign_id"] = activeCampaign.ID.String()
+			auditInput["campaign_name"] = activeCampaign.Name
+		}
+
 		_ = auditLogger.Log(ctx, audit.Entry{
 			MerchantID:    merchant.ID,
 			CorrelationID: correlationID,
 			ToolName:      "negotiate_cart_bundle",
-			Input: map[string]any{
-				"cart_id":               cartIDStr,
-				"proposed_bundle_price": proposedBundlePrice,
-				"attempt_number":        attemptNumber,
-			},
-			Decision:   evalResult.Decision,
-			ReasonCode: evalResult.ReasonCode,
-			Output:     evalResult,
-			DurationMs: time.Since(start).Milliseconds(),
+			Input:         auditInput,
+			Decision:      evalResult.Decision,
+			ReasonCode:    evalResult.ReasonCode,
+			Output:        evalResult,
+			DurationMs:    time.Since(start).Milliseconds(),
 		})
 
 		respBytes, _ := json.Marshal(evalResult)
@@ -359,7 +428,7 @@ func handleCheckoutCart(
 			return mcp.NewToolResultError("cart is empty or not found"), nil
 		}
 
-		paymentMethod := request.GetString("payment_method", "payment_link")
+		paymentMethod := request.GetString("payment_method", "autonomous_wallet")
 		agentID := request.GetString("agent_id", "claude-buyer-01")
 
 		// 1. Dual-Path: Check if autonomous wallet settlement is requested

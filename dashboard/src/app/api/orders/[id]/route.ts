@@ -94,7 +94,7 @@ function formatOrderResponse(row: any) {
     order: {
       id: row.id,
       razorpay_reference: row.razorpay_order_id || 'RZP-DIRECT-AUTH',
-      merchant_name: row.merchant_name || 'Soham Gadgets Store',
+      merchant_name: row.merchant_name || 'boAt Lifestyle Flagship Store',
       merchant_gstin: '27AABCU9603R1ZM',
       status: row.status || 'paid',
       created_at: createdAt.toISOString(),

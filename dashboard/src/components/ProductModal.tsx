@@ -11,6 +11,63 @@ interface ProductModalProps {
   merchantId: string;
 }
 
+export const PRODUCT_CATEGORIES = [
+  {
+    group: 'Electronics & Gadgets',
+    categories: [
+      { id: 'audio', label: 'Audio, Headphones & Speakers' },
+      { id: 'wearables', label: 'Smartwatches & Fitness Bands' },
+      { id: 'computing', label: 'Computers, Laptops & Accessories' },
+      { id: 'smart_home', label: 'Smart Home & IoT Devices' },
+      { id: 'mobile_accessories', label: 'Mobile Accessories & Fast Chargers' },
+      { id: 'cameras_optics', label: 'Cameras, Drones & Optics' },
+    ],
+  },
+  {
+    group: 'Food, Beverages & Gourmet',
+    categories: [
+      { id: 'packaged_food', label: 'Packaged Snacks, Sweets & Breakfast' },
+      { id: 'beverages', label: 'Coffee, Tea & Cold Beverages' },
+      { id: 'dairy_fresh', label: 'Dairy, Plant Milk & Yogurts' },
+      { id: 'meat_seafood', label: 'Fresh Meat, Seafood & Poultry' },
+      { id: 'organic_staples', label: 'Organic Grains, Oils & Spices' },
+    ],
+  },
+  {
+    group: 'Health, Beauty & Personal Care',
+    categories: [
+      { id: 'beauty_skincare', label: 'Skincare, Haircare & Cosmetics' },
+      { id: 'personal_care', label: "Bath, Body & Men's Grooming" },
+      { id: 'health_nutrition', label: 'Supplements, Protein & Superfoods' },
+      { id: 'pharmacy_wellness', label: 'OTC Wellness, First Aid & Monitors' },
+    ],
+  },
+  {
+    group: 'Fashion, Apparel & Lifestyle',
+    categories: [
+      { id: 'mens_apparel', label: "Men's Apparel & Footwear" },
+      { id: 'womens_apparel', label: "Women's Apparel & Ethnic Wear" },
+      { id: 'luggage_bags', label: 'Luggage, Backpacks & Travel Bags' },
+      { id: 'eyewear_jewellery', label: 'Eyewear, Watches & Jewellery' },
+    ],
+  },
+  {
+    group: 'Home, Kitchen & Sports',
+    categories: [
+      { id: 'home_kitchen', label: 'Kitchen Appliances, Cookware & Dining' },
+      { id: 'home_decor', label: 'Home Decor, Bedding & Lighting' },
+      { id: 'fitness_sports', label: 'Gym Equipment, Yoga & Sports Gear' },
+      { id: 'books_stationery', label: 'Books, Notebooks & Office Supplies' },
+    ],
+  },
+  {
+    group: 'Other',
+    categories: [
+      { id: 'general', label: 'General Merchandise' },
+    ],
+  },
+];
+
 export function ProductModal({ isOpen, onClose, onSaved, product, merchantId }: ProductModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -200,13 +257,17 @@ export function ProductModal({ isOpen, onClose, onSaved, product, merchantId }: 
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-50 border border-black/15 rounded-md text-xs sm:text-sm text-figma-ink focus:outline-none focus:border-black capitalize transition font-medium"
+                className="w-full px-4 py-2.5 bg-zinc-50 border border-black/15 rounded-md text-xs sm:text-sm text-figma-ink focus:outline-none focus:border-black transition font-medium"
               >
-                <option value="audio">Audio & Headphones</option>
-                <option value="wearables">Wearables & Watches</option>
-                <option value="computing">Computing & Accessories</option>
-                <option value="smart_home">Smart Home Devices</option>
-                <option value="general">General Merchandise</option>
+                {PRODUCT_CATEGORIES.map((group) => (
+                  <optgroup key={group.group} label={group.group}>
+                    {group.categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
             <div>
