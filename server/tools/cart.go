@@ -354,16 +354,57 @@ func handleNegotiateCartBundle(pool *pgxpool.Pool, auditLogger *audit.Logger, cf
 		}
 
 		if evalResult.Decision == "approved" {
-			// Apply allocations to cart items in DB
+			subtotal := 0
+			totalTax := 0
+
 			for _, alloc := range evalResult.Allocations {
-				prodUUID, _ := uuid.Parse(alloc.ID)
-				_, _ = pool.Exec(ctx, `UPDATE cart_items SET unit_agreed_price_paise = $1, line_total_paise = $2 WHERE cart_id = $3 AND product_id = $4;`,
-					alloc.UnitAgreedPrice, alloc.LineTotalPaise, cartID, prodUUID)
+				prodUUID, pErr := uuid.Parse(alloc.ID)
+				if pErr != nil {
+					continue
+				}
+
+				taxRateBps := 1800
+				for _, it := range currentCart.Items {
+					if it.ProductID == prodUUID {
+						taxRateBps = it.TaxRateBps
+						break
+					}
+				}
+
+				lineTaxable := alloc.UnitAgreedPrice * alloc.Quantity
+				lineTax := cart.CalculateLineTax(lineTaxable, taxRateBps)
+				lineTotal := lineTaxable + lineTax
+
+				_, _ = pool.Exec(ctx, `
+					UPDATE cart_items 
+					SET unit_agreed_price_paise = $1, 
+					    tax_amount_paise = $2, 
+					    line_total_paise = $3 
+					WHERE cart_id = $4 AND product_id = $5;
+				`, alloc.UnitAgreedPrice, lineTax, lineTotal, cartID, prodUUID)
+
+				subtotal += lineTaxable
+				totalTax += lineTax
 			}
-			// Update cart totals
-			subtotal, tax, total := cart.RecalculateCartTotals(currentCart.Items, 0)
-			_, _ = pool.Exec(ctx, `UPDATE carts SET subtotal_paise = $1, tax_paise = $2, total_paise = $3, negotiated_bundle = true, updated_at = NOW() WHERE id = $4;`,
-				subtotal, tax, total, cartID)
+
+			totalWithTax := subtotal + totalTax
+
+			_, _ = pool.Exec(ctx, `
+				UPDATE carts 
+				SET subtotal_paise = $1, 
+				    tax_paise = $2, 
+				    discount_paise = $3, 
+				    total_paise = $4, 
+				    negotiated_bundle = true, 
+				    updated_at = NOW() 
+				WHERE id = $5;
+			`, subtotal, totalTax, evalResult.TotalSavingsPaise, totalWithTax, cartID)
+
+			evalResult.TaxPaise = totalTax
+			evalResult.TotalWithTaxPaise = totalWithTax
+			evalResult.FinalTotalINR = fmt.Sprintf("₹%.2f", float64(subtotal)/100.0)
+			evalResult.TotalWithTaxINR = fmt.Sprintf("₹%.2f", float64(totalWithTax)/100.0)
+			evalResult.TotalSavingsINR = fmt.Sprintf("₹%.2f", float64(evalResult.TotalSavingsPaise)/100.0)
 		}
 
 		auditInput := map[string]any{
@@ -469,7 +510,13 @@ func handleCheckoutCart(
 							"settlement_type":        "autonomous_wallet_zero_click",
 							"delegated_protocol":     "NPCI UPI Circle / AP2 Delegated Mandate",
 							"cart_id":                cartIDStr,
+							"subtotal_paise":         currentCart.SubtotalPaise,
+							"discount_paise":         currentCart.DiscountPaise,
+							"tax_paise":              currentCart.TaxPaise,
 							"total_paise":            currentCart.TotalPaise,
+							"subtotal_inr":           fmt.Sprintf("₹%.2f", float64(currentCart.SubtotalPaise)/100.0),
+							"discount_inr":           fmt.Sprintf("₹%.2f", float64(currentCart.DiscountPaise)/100.0),
+							"tax_inr":                fmt.Sprintf("₹%.2f", float64(currentCart.TaxPaise)/100.0),
 							"total_inr":              fmt.Sprintf("₹%.2f", float64(currentCart.TotalPaise)/100.0),
 							"item_count":             len(currentCart.Items),
 							"remaining_balance_inr":  fmt.Sprintf("₹%.2f", float64(updatedWallet.BalancePaise)/100.0),

@@ -136,10 +136,15 @@ type BundleEvaluationResult struct {
 	Decision          string                `json:"decision"` // "approved", "rejected", "pending_approval"
 	ReasonCode        string                `json:"reason_code"`
 	FinalTotalPrice   int                   `json:"final_total_price,omitempty"`
+	TaxPaise          int                   `json:"tax_paise,omitempty"`
+	TotalWithTaxPaise int                   `json:"total_with_tax_paise,omitempty"`
+	FinalTotalINR     string                `json:"final_total_inr,omitempty"`
+	TotalWithTaxINR   string                `json:"total_with_tax_inr,omitempty"`
 	CounterOfferPrice int                   `json:"counter_offer_price,omitempty"`
 	TotalBasePrice    int                   `json:"total_base_price"`
 	TotalFloorPrice   int                   `json:"total_floor_price"`
 	TotalSavingsPaise int                   `json:"total_savings_paise"`
+	TotalSavingsINR   string                `json:"total_savings_inr,omitempty"`
 	Allocations       []ItemPriceAllocation `json:"allocations,omitempty"`
 	CampaignID        *string               `json:"campaign_id,omitempty"`
 	CampaignName      string                `json:"campaign_name,omitempty"`
