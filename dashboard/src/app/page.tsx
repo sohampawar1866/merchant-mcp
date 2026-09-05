@@ -309,7 +309,7 @@ function DashboardContent() {
         {/* Figma Marquee Strip */}
         <div className="bg-figma-inverseCanvas text-figma-inverseInk h-7 px-3 sm:px-6 flex items-center justify-between text-[11px] font-mono tracking-wider uppercase select-none w-full overflow-hidden">
           <span className="truncate text-[10px] sm:text-[11px]">Autonomous AI Storefront • Protected Floor Pricing • Instant Razorpay Webhooks</span>
-          <span className="hidden md:inline-block text-[10px] text-zinc-400 shrink-0">ENGINE v1.0.0</span>
+          <span className="hidden md:inline-block text-[10px] text-zinc-400 shrink-0">ENGINE v1.1.0</span>
         </div>
 
         {/* Mobile & Tablet 5-Column Tab Bar */}
@@ -374,7 +374,7 @@ function DashboardContent() {
             <span className="w-1.5 h-1.5 rounded-full bg-figma-success"></span>
             Razorpay Live
           </span>
-          <span className="text-zinc-500">v1.0.0</span>
+          <span className="text-zinc-500">v1.1.0</span>
         </div>
       </footer>
     </div>

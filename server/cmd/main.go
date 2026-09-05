@@ -38,7 +38,7 @@ func main() {
 	}
 
 	cfg := config.Load()
-	log.Printf("AgenticCheckout Multi-Tenant MCP Gateway v1.0.0 starting (transport: %s, port: %s)", cfg.MCPTransport, cfg.Port)
+	log.Printf("AgenticCheckout Multi-Tenant MCP Gateway v1.1.0 starting (transport: %s, port: %s)", cfg.MCPTransport, cfg.Port)
 	log.Printf("Configuration: find_and_price=%v, negotiation=%v, human_approval=%v, max_attempts=%d, rate_limit=%d/min, strict_webhook=%v",
 		cfg.EnableFindAndPrice, cfg.EnableNegotiation, cfg.EnableHumanApproval, cfg.MaxNegotiationAttempts, cfg.MaxToolCallsPerMinute, cfg.WebhookStrictMode)
 
@@ -76,7 +76,7 @@ func main() {
 	// Initialize MCP Server
 	s := server.NewMCPServer(
 		"agentic-checkout-gateway",
-		"1.0.0",
+		"1.1.0",
 		server.WithToolCapabilities(true),
 		server.WithLogging(),
 	)
